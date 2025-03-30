@@ -276,7 +276,29 @@
                   <th>Actions</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody>
+                <tr>
+                  <td>12345</td>
+                  <td>Rastriya Banijya Bank Ltd.</td>
+                  <td>Ram Bahadur</td>
+                  <td>100000</td>
+                  <td>10</td>
+                  <td>Compound</td>
+                  <td>Annually</td>
+                  <td>2024-01-01</td>
+                  <td>5 Years</td>
+                  <td>2029-01-01</td>
+                  <td>61051</td>
+                  <td>0</td>
+                  <td>161051</td>
+                  <td>2028-12-01</td>
+                  <td>Active</td>
+                  <td>
+                    <button class="btn btn-sm btn-warning edit-btn" data-index="0">Edit</button>
+                    <button class="btn btn-sm btn-danger delete-btn" data-index="0">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
           <div class="mt-4 d-flex justify-content-between">
@@ -455,7 +477,29 @@
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
-      let fds = JSON.parse(localStorage.getItem('fds')) || [];
+      let fds = JSON.parse(localStorage.getItem('fds')) || [
+        {
+            fdNumber: "12345",
+            bankName: "Rastriya Banijya Bank Ltd.",
+            depositorName: "Ram Bahadur",
+            principalAmount: 100000,
+            interestRate: 10,
+            interestType: "Compound",
+            compoundingFrequency: "Annually",
+            startDate: "2024-01-01",
+            termValue: 5,
+            termUnit: "Years",
+            maturityDate: "2029-01-01",
+            interestEarned: 61051,
+            tdsDeducted: 0,
+            maturityAmount: 161051,
+            renewalReminderDate: "2028-12-01",
+            status: "Active",
+            nomineeName: "",
+            nomineeContactDetails: "",
+            notes: ""
+        }
+      ];
       let banks = [
         "Rastriya Banijya Bank Ltd.",
         "Nabil Bank Ltd.",
@@ -497,38 +541,4 @@
       const exportExcelBtn = document.getElementById("export-excel-btn");
       const calculateInterestBtn = document.getElementById("calculate-interest-btn");
       const calculateInterestConfirmBtn = document.getElementById("calculate-interest-confirm-btn");
-      const printReportBtn = document.getElementById("print-report-btn");
-
-
-      const fdNumberInput = document.getElementById("fd-number");
-      const bankNameInput = document.getElementById("bank-name");
-      const depositorNameInput = document.getElementById("depositor-name");
-      const principalAmountInput = document.getElementById("principal-amount");
-      const interestRateInput = document.getElementById("interest-rate");
-      const interestTypeSelect = document.getElementById("interest-type");
-      const compoundingFrequencySelect = document.getElementById("compounding-frequency");
-      const startDateInput = document.getElementById("start-date");
-      const termValueInput = document.getElementById("term-value");
-      const termUnitSelect = document.getElementById("term-unit");
-      const maturityDateInput = document.getElementById("maturity-date");
-      const interestEarnedInput = document.getElementById("interest-earned");
-      const tdsDeductedInput = document.getElementById("tds-deducted");
-      const maturityAmountInput = document.getElementById("maturity-amount");
-      const renewalReminderDateInput = document.getElementById("renewal-reminder-date");
-      const statusSelect = document.getElementById("status");
-      const nomineeNameInput = document.getElementById("nominee-name");
-      const nomineeContactDetailsInput = document.getElementById("nominee-contact-details");
-      const notesInput = document.getElementById("notes");
-      let selectedDate = null;
-      let selectedCalculationDate = null;
-
-
-      // For calculate interest modal
-      const fdNumberInterestInput = document.getElementById("fd-number-interest");
-      const calculationDateInput = document.getElementById("calculation-date");
-      const calculatedInterestInput = document.getElementById("calculated-interest");
-
-
-      flatpickr(startDateInput, {
-        dateFormat: "Y-m-d",
-        onChange: function (selectedDates, dateStr, instance
+      const printReportBtn = document.getElementById("print-report-
