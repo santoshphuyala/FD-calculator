@@ -445,7 +445,29 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
       let fds = JSON.parse(localStorage.getItem('fds')) || [];
-      let banks = JSON.parse(localStorage.getItem('banks')) || [];
+      let banks = [
+        "Rastriya Banijya Bank Ltd.",
+        "Nabil Bank Ltd.",
+        "Nepal Bank Ltd.",
+        "Himalayan Bank Ltd.",
+        "Nepal Investment Mega Bank Ltd.",
+        "Standard Chartered Bank Nepal Ltd.",
+        "Everest Bank Ltd.",
+        "Siddhartha Bank Ltd.",
+        "Global IME Bank Ltd.",
+        "NIC Asia Bank Ltd.",
+        "Machhapuchhre Bank Ltd.",
+        "Kumari Bank Ltd.",
+        "Laxmi Sunrise Bank Ltd.",
+        "Prabhu Bank Ltd.",
+        "Nepal SBI Bank Ltd.",
+        "Citizens Bank International Ltd.",
+        "Sanima Bank Ltd.",
+        "Agricultural Development Bank Ltd.",
+        "Prime Commercial Bank Ltd.",
+        "Mega Bank Nepal Ltd.",
+        "Bank of Kathmandu Ltd.",
+      ];
       let editingIndex = null;
       const addEditFDModalEl = document.getElementById("add-edit-fd-modal");
       const deleteFDModalEl = document.getElementById("delete-fd-modal");
@@ -515,26 +537,4 @@
       });
 
       flatpickr(calculationDateInput, {
-        dateFormat: "Y-m-d",
-        maxDate: "today"
-      });
-
-
-      function populateBankOptions() {
-        bankNameInput.innerHTML = "";
-        banks.forEach(bank => {
-          const option = document.createElement("option");
-          option.value = bank;
-          option.textContent = bank;
-          bankNameInput.appendChild(option);
-        });
-      }
-
-
-      function calculateMaturityAndInterest() {
-        const startDate = selectedDate;
-        const termValue = parseFloat(termValueInput.value);
-        const termUnit = termUnitSelect.value;
-        const principalAmount = parseFloat(principalAmountInput.value);
-        const interestRate = parseFloat(interestRateInput.value);
-        const interestType = interestTypeSelect.va
+        dateForm
