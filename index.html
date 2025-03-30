@@ -1,343 +1,544 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fixed Deposit Record</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fixed Deposit Record System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      .container {
+        max-width: 1200px;
+      }
+      .card {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+      }
+      .card-header {
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #ddd;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        padding: 16px;
+      }
+      .card-title {
+        margin-bottom: 0;
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .card-body {
+        padding: 20px;
+      }
+      .form-label {
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+      .form-control, .form-select {
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        padding: 10px;
+        transition: border-color 0.3s ease;
+      }
+      .form-control:focus, .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+      }
+      .btn-primary {
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+      }
+      .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #0056b3;
+        transform: translateY(-2px);
+      }
+      .btn-outline-secondary {
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: border-color 0.3s ease, transform 0.2s ease;
+      }
+      .btn-outline-secondary:hover {
+        background-color: #e9ecef;
+        border-color: #e9ecef;
+        transform: translateY(-2px);
+      }
+      .table {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .table thead th {
+        background-color: #f8f9fa;
+        color: #343a40;
+        font-weight: 600;
+        padding: 16px;
+        border-bottom: 2px solid #ddd;
+      }
+      .table tbody td {
+        padding: 16px;
+        border-bottom: 1px solid #eee;
+      }
+      .table tbody tr:hover {
+        background-color: #f5f5f5;
+      }
+      .btn-sm {
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 14px;
+      }
+      .btn-warning {
+        background-color: #ffeeba;
+        border-color: #ffeeba;
+        color: #212529;
+        transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+      }
+      .btn-warning:hover {
+        background-color: #ffdf8e;
+        border-color: #ffdf8e;
+        transform: translateY(-2px);
+      }
+      .btn-danger {
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 14px;
+        transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+      }
+      .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #c82333;
+        transform: translateY(-2px);
+      }
+      .modal-content {
+        border-radius: 12px;
+      }
+      .modal-header {
+        border-bottom: 1px solid #ddd;
+        padding: 16px;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+      }
+      .modal-title {
+        margin-bottom: 0;
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .modal-body {
+        padding: 20px;
+      }
+      .modal-footer {
+        border-top: 1px solid #ddd;
+        padding: 16px;
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .flatpickr-calendar {
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .flatpickr-month {
+        background-color: #f8f9fa;
+        color: #343a40;
+        padding: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #ddd;
+      }
+      .flatpickr-prev-month, .flatpickr-next-month {
+        border: none;
+        background-color: transparent;
+        color: #007bff;
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 6px;
+        transition: background-color 0.3s ease;
+      }
+      .flatpickr-prev-month:hover, .flatpickr-next-month:hover {
+        background-color: rgba(0, 123, 255, 0.1);
+      }
+      .flatpickr-weekday {
+        color: #6c757d;
+        font-weight: 500;
+        padding: 10px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+      }
+      .flatpickr-day {
+        padding: 10px;
+        text-align: center;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      .flatpickr-day:hover, .flatpickr-day.selected {
+        background-color: #007bff;
+        color: #fff;
+      }
+      .flatpickr-disabled, .flatpickr-disabled:hover {
+        color: #6c757d;
+        background-color: transparent;
+        cursor: not-allowed;
+      }
+      .alert-red {
+        background-color: #f87171;
+        color: white;
+        padding: 8px;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      @media print {
         body {
-            font-family: sans-serif;
-            background-color: #f8f9fa;
+          font-size: 12pt;
         }
-
-        .container {
-            max-width: 1000px;
+        .table thead th {
+          background-color: #f8f9fa !important;
+          color: #343a40 !important;
+          padding: 8px !important;
+          border-bottom: 2px solid #ddd !important;
         }
-
-        .red-alert {
-            color: red;
-            font-weight: bold;
+        .table tbody td {
+          padding: 8px !important;
+          border-bottom: 1px solid #eee !important;
         }
+        .table-responsive {
+          overflow-x: visible !important;
+        }
+        .table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+          background-color: rgba(0, 0, 0, 0.05) !important;
+        }
+        .card {
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .card-header {
+          display: none !important;
+        }
+        .card-body {
+          padding: 0 !important;
+        }
+        .btn {
+          display: none !important;
+        }
+        #fd-table {
+          margin-top: 20px !important;
+        }
+        .alert-red {
+          display: none !important;
+        }
+      }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container mt-5">
-        <h1>Fixed Deposit Record</h1>
-
-        <div class="card mb-3">
-            <div class="card-header bg-primary text-white">
-                Add New Fixed Deposit
-            </div>
-            <div class="card-body">
-                <form id="addFDForm">
-                    <div class="mb-3">
-                        <label for="fdAccountNumber" class="form-label">Account Number</label>
-                        <input type="text" class="form-control" id="fdAccountNumber" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="principalAmount" class="form-label">Principal Amount</label>
-                        <input type="number" class="form-control" id="principalAmount" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="interestRate" class="form-label">Interest Rate (%)</label>
-                        <input type="number" class="form-control" id="interestRate" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="startDate" class="form-label">Start Date</label>
-                        <input type="date" class="form-control" id="startDate" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="maturityDate" class="form-label">Maturity Date</label>
-                        <input type="date" class="form-control" id="maturityDate" required>
-                    </div>
-                    <button type="submit" class="btn btn-success">Add FD</button>
-                </form>
-            </div>
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Fixed Deposit Records</h2>
         </div>
-
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                Fixed Deposit Records
-            </div>
-            <div class="card-body">
-                <table class="table table-striped table-bordered" id="fdTable">
-                    <thead>
-                        <tr>
-                            <th>Account Number</th>
-                            <th>Principal Amount</th>
-                            <th>Interest Rate (%)</th>
-                            <th>Start Date</th>
-                            <th>Maturity Date</th>
-                            <th>Expiry Date</th>
-                            <th>Interest Earned</th>
-                            <th>Actions</th>
-                            <th>Reminder</th>
-                        </tr>
-                    </thead>
-                    <tbody id="fdTableBody">
-                        </tbody>
-                </table>
-            </div>
-            <div class="card-footer">
-                <button class="btn btn-secondary" onclick="exportToExcel()">Export to Excel</button>
-                <button class="btn btn-secondary" onclick="sendEmail()">Email Records</button>
-                <button class="btn btn-secondary" onclick="printRecords()">Print Records</button>
-            </div>
+        <div class="card-body">
+          <div class="mb-4">
+            <button class="btn btn-primary" id="add-fd-btn">Add New FD</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-striped table-hover" id="fd-table">
+              <thead>
+                <tr>
+                  <th>FD Number</th>
+                  <th>Bank Name</th>
+                  <th>Depositor Name(s)</th>
+                  <th>Principal Amount</th>
+                  <th>Interest Rate (%)</th>
+                  <th>Interest Type</th>
+                  <th>Compounding Frequency</th>
+                  <th>Start Date</th>
+                  <th>Term (Years/Months)</th>
+                  <th>Maturity Date</th>
+                  <th>Interest Earned</th>
+                  <th>TDS Deducted (if any)</th>
+                  <th>Maturity Amount</th>
+                  <th>Renewal Reminder Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>12345</td>
+                  <td>Rastriya Banijya Bank Ltd.</td>
+                  <td>Ram Bahadur</td>
+                  <td>100000</td>
+                  <td>10</td>
+                  <td>Compound</td>
+                  <td>Annually</td>
+                  <td>2024-01-01</td>
+                  <td>5 Years</td>
+                  <td>2029-01-01</td>
+                  <td>61051</td>
+                  <td>0</td>
+                  <td>161051</td>
+                  <td>2028-12-01</td>
+                  <td>Active</td>
+                  <td>
+                    <button class="btn btn-sm btn-warning edit-btn" data-index="0">Edit</button>
+                    <button class="btn btn-sm btn-danger delete-btn" data-index="0">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-4 d-flex justify-content-between">
+            <button class="btn btn-outline-secondary" id="export-excel-btn">Export to Excel</button>
+            <button class="btn btn-outline-secondary" id="calculate-interest-btn">Calculate Interest on Date</button>
+            <button class="btn btn-outline-secondary" id="print-report-btn">Print Report</button>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <div class="modal fade" id="editFDModal" tabindex="-1" aria-labelledby="editFDModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-warning text-dark">
-                        <h5 class="modal-title" id="editFDModalLabel">Edit Fixed Deposit</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="editFDForm">
-                            <input type="hidden" id="editFdIndex">
-                            <div class="mb-3">
-                                <label for="editFdAccountNumber" class="form-label">Account Number</label>
-                                <input type="text" class="form-control" id="editFdAccountNumber" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editPrincipalAmount" class="form-label">Principal Amount</label>
-                                <input type="number" class="form-control" id="editPrincipalAmount" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editInterestRate" class="form-label">Interest Rate (%)</label>
-                                <input type="number" class="form-control" id="editInterestRate" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editStartDate" class="form-label">Start Date</label>
-                                <input type="date" class="form-control" id="editStartDate" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editMaturityDate" class="form-label">Maturity Date</label>
-                                <input type="date" class="form-control" id="editMaturityDate" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </form>
-                    </div>
+    <div class="modal fade" id="add-edit-fd-modal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Add/Edit Fixed Deposit</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="add-edit-fd-form" class="row g-3">
+              <div class="col-md-6">
+                <label for="fd-number" class="form-label">FD Number/Account ID</label>
+                <input type="text" class="form-control" id="fd-number" required />
+              </div>
+              <div class="col-md-6">
+                <label for="bank-name" class="form-label">Bank Name</label>
+                <select id="bank-name" class="form-select" required>
+                </select>
+              </div>
+              <div class="col-md-12">
+                <label for="depositor-name" class="form-label">Depositor Name(s)</label>
+                <input type="text" class="form-control" id="depositor-name" required />
+              </div>
+              <div class="col-md-6">
+                <label for="principal-amount" class="form-label">Principal Amount</label>
+                <input type="number" class="form-control" id="principal-amount" required min="0" />
+              </div>
+              <div class="col-md-6">
+                <label for="interest-rate" class="form-label">Interest Rate (%)</label>
+                <input type="number" class="form-control" id="interest-rate" required min="0" step="0.01" />
+              </div>
+              <div class="col-md-6">
+                <label for="interest-type" class="form-label">Interest Type</label>
+                <select id="interest-type" class="form-select" required>
+                  <option value="Simple">Simple</option>
+                  <option value="Compound">Compound</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="compounding-frequency" class="form-label">Compounding Frequency</label>
+                <select id="compounding-frequency" class="form-select" required>
+                  <option value="">N/A</option>
+                  <option value="Annual">Annual</option>
+                  <option value="Semi-annual">Semi-annual</option>
+                  <option value="Quarterly">Quarterly</option>
+                  <option value="Monthly">Monthly</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="start-date" class="form-label">Start Date</label>
+                <input type="text" class="form-control datepicker" id="start-date" required />
+              </div>
+              <div class="col-md-6">
+                <label for="term" class="form-label">Term (Years/Months)</label>
+                <div class="input-group">
+                  <input type="number" class="form-control" id="term-value" required min="0" />
+                  <select id="term-unit" class="form-select">
+                    <option value="Years">Years</option>
+                    <option value="Months">Months</option>
+                  </select>
                 </div>
-            </div>
+              </div>
+              <div class="col-md-6">
+                <label for="maturity-date" class="form-label">Maturity Date</label>
+                <input type="text" class="form-control datepicker" id="maturity-date" required readonly />
+              </div>
+              <div class="col-md-6">
+                <label for="interest-earned" class="form-label">Interest Earned</label>
+                <input type="text" class="form-control" id="interest-earned" required readonly />
+              </div>
+              <div class="col-md-6">
+                <label for="tds-deducted" class="form-label">TDS Deducted (if any)</label>
+                <input type="text" class="form-control" id="tds-deducted" required readonly />
+              </div>
+              <div class="col-md-6">
+                <label for="maturity-amount" class="form-label">Maturity Amount</label>
+                <input type="text" class="form-control" id="maturity-amount" required readonly />
+              </div>
+              <div class="col-md-6">
+                <label for="renewal-reminder-date" class="form-label">Renewal Reminder Date</label>
+                <input type="text" class="form-control datepicker" id="renewal-reminder-date" required readonly />
+              </div>
+              <div class="col-md-6">
+                <label for="status" class="form-label">Status</label>
+                <select id="status" class="form-select" required>
+                  <option value="Active">Active</option>
+                  <option value="Matured">Matured</option>
+                  <option value="Renewed">Renewed</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+              <div class="col-md-12">
+                <label for="nominee-name" class="form-label">Nominee Name</label>
+                <input type="text" class="form-control" id="nominee-name" />
+              </div>
+              <div class="col-md-12">
+                <label for="nominee-contact-details" class="form-label">Nominee Contact Details</label>
+                <input type="text" class="form-control" id="nominee-contact-details" />
+              </div>
+              <div class="col-md-12">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea class="form-control" id="notes" rows="3"></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="save-fd-btn">Save FD</button>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-danger text-white">
-                        <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirm Delete</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        Are you sure you want to delete this fixed deposit record?
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-                    </div>
-                </div>
-            </div>
+    <div class="modal fade" id="delete-fd-modal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Delete FD Record</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>Are you sure you want to delete this FD record?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="delete-confirm-btn">Delete</button>
+          </div>
         </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="calculate-interest-modal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Calculate Interest on Date</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="calculate-interest-form" class="g-3">
+              <div class="col-md-12">
+                <label for="fd-number-interest" class="form-label">FD Number/Account ID</label>
+                <select id="fd-number-interest" class="form-select" required>
+                </select>
+              </div>
+              <div class="col-md-12">
+                <label for="calculation-date" class="form-label">Calculation Date</label>
+                <input type="text" class="form-control datepicker" id="calculation-date" required />
+              </div>
+              <div class="col-md-12">
+                <label for="calculated-interest" class="form-label">Calculated Interest</label>
+                <input type="text" class="form-control" id="calculated-interest" readonly />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="calculate-interest-confirm-btn">Calculate</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
-        const addFDForm = document.getElementById('addFDForm');
-        const fdTableBody = document.getElementById('fdTableBody');
-        const editFDModal = new bootstrap.Modal(document.getElementById('editFDModal'));
-        const editFDForm = document.getElementById('editFDForm');
-        const deleteConfirmationModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
-        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-
-        let fdRecords = loadFDRecords();
-        let editingIndex = -1;
-        let deletingIndex = -1;
-
-        displayFDRecords();
-        startReminderInterval();
-
-        addFDForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            addFD();
-        });
-
-        editFDForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            saveEditedFD();
-        });
-
-        confirmDeleteBtn.addEventListener('click', function() {
-            deleteFD();
-        });
-
-        function loadFDRecords() {
-            const storedRecords = localStorage.getItem('fdRecords');
-            return storedRecords ? JSON.parse(storedRecords) : [];
+      let fds = JSON.parse(localStorage.getItem('fds')) || [
+        {
+            fdNumber: "12345",
+            bankName: "Rastriya Banijya Bank Ltd.",
+            depositorName: "Ram Bahadur",
+            principalAmount: 100000,
+            interestRate: 10,
+            interestType: "Compound",
+            compoundingFrequency: "Annually",
+            startDate: "2024-01-01",
+            termValue: 5,
+            termUnit: "Years",
+            maturityDate: "2029-01-01",
+            interestEarned: 61051,
+            tdsDeducted: 0,
+            maturityAmount: 161051,
+            renewalReminderDate: "2028-12-01",
+            status: "Active",
+            nomineeName: "",
+            nomineeContactDetails: "",
+            notes: ""
         }
+      ];
+      let banks = [
+        "Rastriya Banijya Bank Ltd.",
+        "Nabil Bank Ltd.",
+        "Nepal Bank Ltd.",
+        "Himalayan Bank Ltd.",
+        "Nepal Investment Mega Bank Ltd.",
+        "Standard Chartered Bank Nepal Ltd.",
+        "Everest Bank Ltd.",
+        "Siddhartha Bank Ltd.",
+        "Global IME Bank Ltd.",
+        "NIC Asia Bank Ltd.",
+        "Machhapuchhre Bank Ltd.",
+        "Kumari Bank Ltd.",
+        "Laxmi Sunrise Bank Ltd.",
+        "Prabhu Bank Ltd.",
+        "Nepal SBI Bank Ltd.",
+        "Citizens Bank International Ltd.",
+        "Sanima Bank Ltd.",
+        "Agricultural Development Bank Ltd.",
+        "Prime Commercial Bank Ltd.",
+        "Mega Bank Nepal Ltd.",
+        "Bank of Kathmandu Ltd.",
+      ];
+      let editingIndex = null;
+      const addEditFDModalEl = document.getElementById("add-edit-fd-modal");
+      const deleteFDModalEl = document.getElementById("delete-fd-modal");
+      const calculateInterestModalEl = document.getElementById("calculate-interest-modal");
 
-        function saveFDRecords() {
-            localStorage.setItem('fdRecords', JSON.stringify(fdRecords));
-        }
 
-        function addFD() {
-            const fdAccountNumber = document.getElementById('fdAccountNumber').value;
-            const principalAmount = parseFloat(document.getElementById('principalAmount').value);
-            const interestRate = parseFloat(document.getElementById('interestRate').value);
-            const startDate = document.getElementById('startDate').value;
-            const maturityDate = document.getElementById('maturityDate').value;
+      const addEditFDModal = new bootstrap.Modal(addEditFDModalEl);
+      const deleteFDModal = new bootstrap.Modal(deleteFDModalEl);
+      const calculateInterestModal = new bootstrap.Modal(calculateInterestModalEl);
 
-            const newFD = {
-                fdAccountNumber,
-                principalAmount,
-                interestRate,
-                startDate,
-                maturityDate
-            };
 
-            fdRecords.push(newFD);
-            saveFDRecords();
-            displayFDRecords();
-            addFDForm.reset();
-        }
-
-        function displayFDRecords() {
-            fdTableBody.innerHTML = '';
-            const currentDate = new Date();
-            const fifteenDaysBeforeExpiry = new Date();
-
-            fdRecords.forEach((fd, index) => {
-                const maturityDateObj = new Date(fd.maturityDate);
-                const expiryDateObj = new Date(fd.maturityDate); // For simplicity, considering expiry same as maturity
-                fifteenDaysBeforeExpiry.setDate(maturityDateObj.getDate() - 15);
-
-                const timeDiff = maturityDateObj.getTime() - new Date(fd.startDate).getTime();
-                const days = Math.ceil(timeDiff / (1000 * 3600 * 24));
-                const interestEarned = (fd.principalAmount * fd.interestRate / 100 / 365) * days;
-                const interestAfterTax = interestEarned * (1 - 0.15);
-
-                const row = fdTableBody.insertRow();
-                row.insertCell().textContent = fd.fdAccountNumber;
-                row.insertCell().textContent = fd.principalAmount.toFixed(2);
-                row.insertCell().textContent = fd.interestRate.toFixed(2);
-                row.insertCell().textContent = fd.startDate;
-                row.insertCell().textContent = fd.maturityDate;
-                row.insertCell().textContent = formatDate(expiryDateObj);
-                row.insertCell().textContent = interestAfterTax.toFixed(2);
-
-                const actionsCell = row.insertCell();
-                actionsCell.innerHTML = `
-                    <button class="btn btn-sm btn-primary me-2" onclick="editFD(${index})">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="confirmDelete(${index})">Delete</button>
-                `;
-
-                // Reminder Logic
-                const reminderCell = row.insertCell();
-                if (currentDate >= fifteenDaysBeforeExpiry && currentDate <= maturityDateObj) {
-                    reminderCell.classList.add('red-alert');
-                    reminderCell.textContent = "Reminder!";
-                } else if (currentDate < fifteenDaysBeforeExpiry) {
-                    const daysToReminder = Math.ceil((fifteenDaysBeforeExpiry.getTime() - currentDate.getTime()) / (1000 * 3600 * 24));
-                    reminderCell.textContent = `Reminder in ${daysToReminder} days`;
-                } else {
-                    reminderCell.textContent = "Matured";
-                }
-            });
-        }
-
-        function editFD(index) {
-            editingIndex = index;
-            const fd = fdRecords[index];
-            document.getElementById('editFdIndex').value = index;
-            document.getElementById('editFdAccountNumber').value = fd.fdAccountNumber;
-            document.getElementById('editPrincipalAmount').value = fd.principalAmount;
-            document.getElementById('editInterestRate').value = fd.interestRate;
-            document.getElementById('editStartDate').value = fd.startDate;
-            document.getElementById('editMaturityDate').value = fd.maturityDate;
-            editFDModal.show();
-        }
-
-        function saveEditedFD() {
-            const index = parseInt(document.getElementById('editFdIndex').value);
-            const fdAccountNumber = document.getElementById('editFdAccountNumber').value;
-            const principalAmount = parseFloat(document.getElementById('editPrincipalAmount').value);
-            const interestRate = parseFloat(document.getElementById('editInterestRate').value);
-            const startDate = document.getElementById('editStartDate').value;
-            const maturityDate = document.getElementById('editMaturityDate').value;
-
-            fdRecords[index] = {
-                fdAccountNumber,
-                principalAmount,
-                interestRate,
-                startDate,
-                maturityDate
-            };
-
-            saveFDRecords();
-            displayFDRecords();
-            editFDModal.hide();
-            editingIndex = -1;
-        }
-
-        function confirmDelete(index) {
-            deletingIndex = index;
-            deleteConfirmationModal.show();
-        }
-
-        function deleteFD() {
-            if (deletingIndex !== -1) {
-                fdRecords.splice(deletingIndex, 1);
-                saveFDRecords();
-                displayFDRecords();
-                deleteConfirmationModal.hide();
-                deletingIndex = -1;
-            }
-        }
-
-        function formatDate(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        function exportToExcel() {
-            const table = document.getElementById('fdTable');
-            const wb = XLSX.utils.table_to_book(table, { sheet: "FD Records" });
-            XLSX.writeFile(wb, 'fd_records.xlsx');
-        }
-
-        function sendEmail() {
-            let emailBody = "Fixed Deposit Records:\n\n";
-            const headers = Array.from(document.querySelectorAll('#fdTable thead th')).map(th => th.textContent).join('\t');
-            emailBody += headers + "\n";
-
-            fdRecords.forEach(fd => {
-                const rowData = [
-                    fd.fdAccountNumber,
-                    fd.principalAmount,
-                    fd.interestRate,
-                    fd.startDate,
-                    fd.maturityDate
-                ].join('\t');
-                emailBody += rowData + "\n";
-            });
-
-            const subject = "Fixed Deposit Records";
-            const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-            window.location.href = mailtoLink;
-            alert("Opening your default email client with the FD records.");
-        }
-
-        function printRecords() {
-            window.print();
-        }
-
-        function startReminderInterval() {
-            setInterval(displayFDRecords, 24 * 60 * 60 * 1000); // Check for reminders daily
-        }
-    </script>
-</body>
-</html>
+      const fdTable = document.getElementById("fd-table").getElementsByTagName("tbody")[0];
+      const addFDBtn = document.getElementById("add-fd-btn");
+      const saveFDBtn = document.getElementById("save-fd-btn");
+      const deleteConfirmBtn = document.getElementById("delete-confirm-btn");
+      const exportExcelBtn = document.getElementById("export-excel-btn");
+      const calculateInterestBtn = document.getElementById("calculate-interest-btn");
+      const calculateInterestConfirmBtn = document.getElementById("calculate-interest-confirm-btn");
+      const printReportBtn = document.getElementByI
