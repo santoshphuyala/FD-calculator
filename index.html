@@ -5,7 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fixed Deposit Record</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1000px;
+        }
+
+        .red-alert {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container mt-5">
@@ -58,6 +73,7 @@
                             <th>Expiry Date</th>
                             <th>Interest Earned</th>
                             <th>Actions</th>
+                            <th>Reminder</th>
                         </tr>
                     </thead>
                     <tbody id="fdTableBody">
@@ -128,6 +144,200 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="script.js"></script>
+    <script>
+        const addFDForm = document.getElementById('addFDForm');
+        const fdTableBody = document.getElementById('fdTableBody');
+        const editFDModal = new bootstrap.Modal(document.getElementById('editFDModal'));
+        const editFDForm = document.getElementById('editFDForm');
+        const deleteConfirmationModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+        let fdRecords = loadFDRecords();
+        let editingIndex = -1;
+        let deletingIndex = -1;
+
+        displayFDRecords();
+        startReminderInterval();
+
+        addFDForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            addFD();
+        });
+
+        editFDForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            saveEditedFD();
+        });
+
+        confirmDeleteBtn.addEventListener('click', function() {
+            deleteFD();
+        });
+
+        function loadFDRecords() {
+            const storedRecords = localStorage.getItem('fdRecords');
+            return storedRecords ? JSON.parse(storedRecords) : [];
+        }
+
+        function saveFDRecords() {
+            localStorage.setItem('fdRecords', JSON.stringify(fdRecords));
+        }
+
+        function addFD() {
+            const fdAccountNumber = document.getElementById('fdAccountNumber').value;
+            const principalAmount = parseFloat(document.getElementById('principalAmount').value);
+            const interestRate = parseFloat(document.getElementById('interestRate').value);
+            const startDate = document.getElementById('startDate').value;
+            const maturityDate = document.getElementById('maturityDate').value;
+
+            const newFD = {
+                fdAccountNumber,
+                principalAmount,
+                interestRate,
+                startDate,
+                maturityDate
+            };
+
+            fdRecords.push(newFD);
+            saveFDRecords();
+            displayFDRecords();
+            addFDForm.reset();
+        }
+
+        function displayFDRecords() {
+            fdTableBody.innerHTML = '';
+            const currentDate = new Date();
+            const fifteenDaysBeforeExpiry = new Date();
+
+            fdRecords.forEach((fd, index) => {
+                const maturityDateObj = new Date(fd.maturityDate);
+                const expiryDateObj = new Date(fd.maturityDate); // For simplicity, considering expiry same as maturity
+                fifteenDaysBeforeExpiry.setDate(maturityDateObj.getDate() - 15);
+
+                const timeDiff = maturityDateObj.getTime() - new Date(fd.startDate).getTime();
+                const days = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                const interestEarned = (fd.principalAmount * fd.interestRate / 100 / 365) * days;
+                const interestAfterTax = interestEarned * (1 - 0.15);
+
+                const row = fdTableBody.insertRow();
+                row.insertCell().textContent = fd.fdAccountNumber;
+                row.insertCell().textContent = fd.principalAmount.toFixed(2);
+                row.insertCell().textContent = fd.interestRate.toFixed(2);
+                row.insertCell().textContent = fd.startDate;
+                row.insertCell().textContent = fd.maturityDate;
+                row.insertCell().textContent = formatDate(expiryDateObj);
+                row.insertCell().textContent = interestAfterTax.toFixed(2);
+
+                const actionsCell = row.insertCell();
+                actionsCell.innerHTML = `
+                    <button class="btn btn-sm btn-primary me-2" onclick="editFD(${index})">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="confirmDelete(${index})">Delete</button>
+                `;
+
+                // Reminder Logic
+                const reminderCell = row.insertCell();
+                if (currentDate >= fifteenDaysBeforeExpiry && currentDate <= maturityDateObj) {
+                    reminderCell.classList.add('red-alert');
+                    reminderCell.textContent = "Reminder!";
+                } else if (currentDate < fifteenDaysBeforeExpiry) {
+                    const daysToReminder = Math.ceil((fifteenDaysBeforeExpiry.getTime() - currentDate.getTime()) / (1000 * 3600 * 24));
+                    reminderCell.textContent = `Reminder in ${daysToReminder} days`;
+                } else {
+                    reminderCell.textContent = "Matured";
+                }
+            });
+        }
+
+        function editFD(index) {
+            editingIndex = index;
+            const fd = fdRecords[index];
+            document.getElementById('editFdIndex').value = index;
+            document.getElementById('editFdAccountNumber').value = fd.fdAccountNumber;
+            document.getElementById('editPrincipalAmount').value = fd.principalAmount;
+            document.getElementById('editInterestRate').value = fd.interestRate;
+            document.getElementById('editStartDate').value = fd.startDate;
+            document.getElementById('editMaturityDate').value = fd.maturityDate;
+            editFDModal.show();
+        }
+
+        function saveEditedFD() {
+            const index = parseInt(document.getElementById('editFdIndex').value);
+            const fdAccountNumber = document.getElementById('editFdAccountNumber').value;
+            const principalAmount = parseFloat(document.getElementById('editPrincipalAmount').value);
+            const interestRate = parseFloat(document.getElementById('editInterestRate').value);
+            const startDate = document.getElementById('editStartDate').value;
+            const maturityDate = document.getElementById('editMaturityDate').value;
+
+            fdRecords[index] = {
+                fdAccountNumber,
+                principalAmount,
+                interestRate,
+                startDate,
+                maturityDate
+            };
+
+            saveFDRecords();
+            displayFDRecords();
+            editFDModal.hide();
+            editingIndex = -1;
+        }
+
+        function confirmDelete(index) {
+            deletingIndex = index;
+            deleteConfirmationModal.show();
+        }
+
+        function deleteFD() {
+            if (deletingIndex !== -1) {
+                fdRecords.splice(deletingIndex, 1);
+                saveFDRecords();
+                displayFDRecords();
+                deleteConfirmationModal.hide();
+                deletingIndex = -1;
+            }
+        }
+
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function exportToExcel() {
+            const table = document.getElementById('fdTable');
+            const wb = XLSX.utils.table_to_book(table, { sheet: "FD Records" });
+            XLSX.writeFile(wb, 'fd_records.xlsx');
+        }
+
+        function sendEmail() {
+            let emailBody = "Fixed Deposit Records:\n\n";
+            const headers = Array.from(document.querySelectorAll('#fdTable thead th')).map(th => th.textContent).join('\t');
+            emailBody += headers + "\n";
+
+            fdRecords.forEach(fd => {
+                const rowData = [
+                    fd.fdAccountNumber,
+                    fd.principalAmount,
+                    fd.interestRate,
+                    fd.startDate,
+                    fd.maturityDate
+                ].join('\t');
+                emailBody += rowData + "\n";
+            });
+
+            const subject = "Fixed Deposit Records";
+            const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+            window.location.href = mailtoLink;
+            alert("Opening your default email client with the FD records.");
+        }
+
+        function printRecords() {
+            window.print();
+        }
+
+        function startReminderInterval() {
+            setInterval(displayFDRecords, 24 * 60 * 60 * 1000); // Check for reminders daily
+        }
+    </script>
 </body>
 </html>
