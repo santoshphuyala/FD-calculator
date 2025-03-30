@@ -190,6 +190,14 @@
         background-color: transparent;
         cursor: not-allowed;
       }
+      .alert-red {
+        background-color: #f87171;
+        color: white;
+        padding: 8px;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        text-align: center;
+      }
       @media print {
         body {
           font-size: 12pt;
@@ -229,6 +237,9 @@
         }
         #fd-table {
           margin-top: 20px !important;
+        }
+        .alert-red {
+          display: none !important;
         }
       }
     </style>
@@ -520,20 +531,4 @@
 
       flatpickr(startDateInput, {
         dateFormat: "Y-m-d",
-        onChange: function (selectedDates, dateStr, instance) {
-          selectedDate = selectedDates[0];
-          calculateMaturityAndInterest();
-        },
-      });
-
-      flatpickr(maturityDateInput, {
-        dateFormat: "Y-m-d",
-        minDate: "today",
-      });
-
-      flatpickr(renewalReminderDateInput, {
-        dateFormat: "Y-m-d",
-        minDate: "today",
-      });
-
-      flatpickr(calculationDateInput
+        onChange: function (selectedDates, dateStr, instance
