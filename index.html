@@ -148,7 +148,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.5);
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             z-index: 1000;
@@ -172,7 +172,6 @@
             margin: 0 5px;
         }
         .account-holder-controls button:hover { background: #2980b9; }
-
         @media (max-width: 768px) {
             .container { padding: 15px; }
             .form-group { flex-direction: column; align-items: stretch; }
@@ -374,8 +373,9 @@
 
         function checkForPassword() {
             const storedPassword = localStorage.getItem('fdPassword');
+            const mainContent = document.getElementById('mainContent');
             if (!storedPassword) {
-                showPasswordPrompt(null, 'set'); // Prompt to set password
+                mainContent.classList.remove('hidden');
             } else {
                 showPasswordPrompt(null); // Prompt to enter password
             }
@@ -405,4 +405,5 @@
         }
 
         function showPasswordPrompt(accountHolder, action = 'login') {
-            const modal = document.getElementById
+            const modal = document.getElementById('passwordModal');
+            const
