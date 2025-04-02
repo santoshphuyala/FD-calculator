@@ -68,7 +68,7 @@
         button:active {
             transform: scale(0.95);
         }
-        #accountHolderSelect, select, input[type="text"], input[type="number"], input[type="date"], input[type="file"], input[type="password"] {
+        #accountHolderSelect, select, input[type="text"], input[type="number"], input[type="date"], input[type="file"] {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 5px;
@@ -141,25 +141,6 @@
             color: #7f8c8d;
             font-size: 12px;
         }
-        #passwordModal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        #passwordModal div {
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
         #chartContainer {
             margin-top: 20px;
             max-width: 600px;
@@ -167,11 +148,6 @@
             margin-right: auto;
         }
         datalist { width: 100%; max-width: 300px; }
-        .account-holder-controls button {
-            background: #3498db;
-            margin: 0 5px;
-        }
-        .account-holder-controls button:hover { background: #2980b9; }
         @media (max-width: 768px) {
             .container { padding: 15px; }
             .form-group { flex-direction: column; align-items: stretch; }
@@ -196,25 +172,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
-    <div id="passwordModal" class="hidden">
-        <div>
-            <h3 id="passwordModalTitle">Set or Enter Password for <span id="currentAccountHolder"></span></h3>
-            <input type="password" id="passwordInput" placeholder="Enter Password">
-            <button id="submitPassword">Submit</button>
-            <p id="passwordError" style="color: red;"></p>
-        </div>
-    </div>
-    <div class="container hidden" id="mainContent">
+    <div class="container" id="mainContent">
         <div class="form-group">
             <label>Account Holder:
                 <select id="accountHolderSelect"></select>
                 <input type="text" id="newAccountHolder" placeholder="New Account Holder">
                 <button id="addAccountHolderBtn">Add Account Holder</button>
-                <div class="account-holder-controls">
-                    <button id="setPasswordBtn">Set Password</button>
-                    <button id="editPasswordBtn">Edit Password</button>
-                    <button id="removePasswordBtn">Remove Password</button>
-                </div>
             </label>
         </div>
         <h2>Fixed Deposit Record - <span id="accountHolderNameDisplay"></span></h2>
@@ -355,45 +318,8 @@
     <footer>
         Software concept and designed by - Santosh Phuyal
     </footer>
-
     <script>
-        let isAuthenticated = false;
-        const ENCRYPTION_KEY = 'FDRecordSecretKey'; // Static for simplicity; should be dynamic in production
-
-        document.addEventListener('DOMContentLoaded', () => {
-            checkForPassword();
-        });
-
-        function checkForPassword() {
-            const storedPassword = localStorage.getItem('fdPassword');
-            const mainContent = document.getElementById('mainContent');
-            if (!storedPassword) {
-                mainContent.classList.remove('hidden');
-            }
-        }
-
-        function encryptData(data) {
-            return CryptoJS.AES.encrypt(JSON.stringify(data), ENCRYPTION_KEY).toString();
-        }
-
-        function decryptData(encryptedData) {
-            if (!encryptedData) return [];
-            try {
-                const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
-                const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-
-                // Check if the decrypted string is valid UTF-8
-                if (!decrypted) {
-                    throw new Error('Decryption resulted in an empty string.');
-                }
-
-                // Attempt to parse the decrypted string as JSON
-                return JSON.parse(decrypted);
-            } catch (e) {
-                console.error('Decryption error:', e);
-                return [];
-            }
-        }
+        // All password-related code has been removed.
     </script>
 </body>
 </html>
