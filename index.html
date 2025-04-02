@@ -357,18 +357,11 @@
     </footer>
 
     <script>
-        let inactivityTimer;
-        const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
         let isAuthenticated = false;
         const ENCRYPTION_KEY = 'FDRecordSecretKey'; // Static for simplicity; should be dynamic in production
 
         document.addEventListener('DOMContentLoaded', () => {
             checkForPassword();
-            resetInactivityTimer();
-
-            document.addEventListener('mousemove', resetInactivityTimer);
-            document.addEventListener('keypress', resetInactivityTimer);
-            document.addEventListener('touchstart', resetInactivityTimer);
         });
 
         function checkForPassword() {
@@ -376,8 +369,6 @@
             const mainContent = document.getElementById('mainContent');
             if (!storedPassword) {
                 mainContent.classList.remove('hidden');
-            } else {
-                showPasswordPrompt(null); // Prompt to enter password
             }
         }
 
@@ -390,12 +381,12 @@
             try {
                 const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
                 const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-                
+
                 // Check if the decrypted string is valid UTF-8
                 if (!decrypted) {
                     throw new Error('Decryption resulted in an empty string.');
                 }
-                
+
                 // Attempt to parse the decrypted string as JSON
                 return JSON.parse(decrypted);
             } catch (e) {
@@ -403,7 +394,6 @@
                 return [];
             }
         }
-
-        function showPasswordPrompt(accountHolder, action = 'login') {
-            const modal = document.getElementById('passwordModal');
-            const
+    </script>
+</body>
+</html>
