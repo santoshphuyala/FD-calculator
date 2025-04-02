@@ -167,6 +167,11 @@
             margin-right: auto;
         }
         datalist { width: 100%; max-width: 300px; }
+        .account-holder-controls button {
+            background: #3498db;
+            margin: 0 5px;
+        }
+        .account-holder-controls button:hover { background: #2980b9; }
 
         @media (max-width: 768px) {
             .container { padding: 15px; }
@@ -194,7 +199,7 @@
 <body>
     <div id="passwordModal" class="hidden">
         <div>
-            <h3>Set or Enter Password for <span id="currentAccountHolder"></span></h3>
+            <h3 id="passwordModalTitle">Set or Enter Password for <span id="currentAccountHolder"></span></h3>
             <input type="password" id="passwordInput" placeholder="Enter Password">
             <button id="submitPassword">Submit</button>
             <p id="passwordError" style="color: red;"></p>
@@ -206,6 +211,11 @@
                 <select id="accountHolderSelect"></select>
                 <input type="text" id="newAccountHolder" placeholder="New Account Holder">
                 <button id="addAccountHolderBtn">Add Account Holder</button>
+                <div class="account-holder-controls">
+                    <button id="setPasswordBtn">Set Password</button>
+                    <button id="editPasswordBtn">Edit Password</button>
+                    <button id="removePasswordBtn">Remove Password</button>
+                </div>
             </label>
         </div>
         <h2>Fixed Deposit Record - <span id="accountHolderNameDisplay"></span></h2>
@@ -351,10 +361,10 @@
         let inactivityTimer;
         const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
         let isAuthenticated = false;
-        const ENCRYPTION_KEY = 'FDRecordSecretKey'; // Should be user-specific in production
+        const ENCRYPTION_KEY = 'FDRecordSecretKey'; // Static for simplicity; should be dynamic in production
 
         document.addEventListener('DOMContentLoaded', () => {
-            showPasswordPrompt(null);
+            showPasswordPrompt(null); // Initial prompt for first account holder
             resetInactivityTimer();
 
             document.addEventListener('mousemove', resetInactivityTimer);
@@ -367,58 +377,85 @@
         }
 
         function decryptData(encryptedData) {
+            if (!encryptedData) return [];
             try {
                 const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
-                return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+                return decrypted ? JSON.parse(decrypted) : [];
             } catch (e) {
                 console.error('Decryption error:', e);
                 return [];
             }
         }
 
-        function showPasswordPrompt(accountHolder) {
+        function showPasswordPrompt(accountHolder, action = 'login') {
             const modal = document.getElementById('passwordModal');
             const mainContent = document.getElementById('mainContent');
+            const title = document.getElementById('passwordModalTitle');
             const currentHolderSpan = document.getElementById('currentAccountHolder');
             currentHolderSpan.textContent = accountHolder || 'New User';
+            title.textContent = action === 'login' ? 'Enter Password for' : action === 'set' ? 'Set Password for' : action === 'edit' ? 'Edit Password for' : 'Remove Password for';
             modal.classList.remove('hidden');
             mainContent.classList.add('hidden');
             const submitBtn = document.getElementById('submitPassword');
-            submitBtn.onclick = () => verifyPassword(accountHolder); // Fixed: Direct assignment
+            submitBtn.onclick = () => verifyPassword(accountHolder, action); // Reset onclick each time
             document.getElementById('passwordInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') verifyPassword(accountHolder);
+                if (e.key === 'Enter') verifyPassword(accountHolder, action);
             });
         }
 
-        function verifyPassword(accountHolder) {
+        function verifyPassword(accountHolder, action) {
             const input = document.getElementById('passwordInput').value;
             const error = document.getElementById('passwordError');
             const modal = document.getElementById('passwordModal');
             const mainContent = document.getElementById('mainContent');
             let passwords = JSON.parse(localStorage.getItem('accountPasswords') || '{}');
 
-            if (!accountHolder || !passwords[accountHolder]) {
-                if (input.length < 4) {
-                    error.textContent = 'Password must be at least 4 characters.';
-                    return;
-                }
-                passwords[accountHolder || document.getElementById('newAccountHolder').value] = input;
-                localStorage.setItem('accountPasswords', JSON.stringify(passwords));
-                isAuthenticated = true;
-                modal.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-                initializeApp();
-            } else {
-                if (input === passwords[accountHolder]) {
+            if (action === 'login') {
+                if (!accountHolder || !passwords[accountHolder]) {
+                    if (input.length < 4) {
+                        error.textContent = 'Password must be at least 4 characters.';
+                        return;
+                    }
+                    passwords[accountHolder || document.getElementById('newAccountHolder').value] = input;
+                    localStorage.setItem('accountPasswords', JSON.stringify(passwords));
+                    isAuthenticated = true;
+                    modal.classList.add('hidden');
+                    mainContent.classList.remove('hidden');
+                    initializeApp();
+                } else if (input === passwords[accountHolder]) {
                     isAuthenticated = true;
                     modal.classList.add('hidden');
                     mainContent.classList.remove('hidden');
                     initializeApp();
                 } else {
                     error.textContent = 'Incorrect password. Try again.';
+                    return;
+                }
+            } else if (action === 'set' || action === 'edit') {
+                if (input.length < 4) {
+                    error.textContent = 'Password must be at least 4 characters.';
+                    return;
+                }
+                passwords[accountHolder] = input;
+                localStorage.setItem('accountPasswords', JSON.stringify(passwords));
+                modal.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                alert(`${action === 'set' ? 'Password set' : 'Password updated'} successfully!`);
+            } else if (action === 'remove') {
+                if (input === passwords[accountHolder]) {
+                    delete passwords[accountHolder];
+                    localStorage.setItem('accountPasswords', JSON.stringify(passwords));
+                    modal.classList.add('hidden');
+                    mainContent.classList.remove('hidden');
+                    alert('Password removed successfully!');
+                } else {
+                    error.textContent = 'Incorrect password. Try again.';
+                    return;
                 }
             }
             document.getElementById('passwordInput').value = '';
+            error.textContent = '';
         }
 
         function resetInactivityTimer() {
@@ -445,6 +482,9 @@
             document.getElementById('fdStartDate').setAttribute('max', today);
 
             document.getElementById('addAccountHolderBtn').addEventListener('click', addAccountHolder);
+            document.getElementById('setPasswordBtn').addEventListener('click', () => showPasswordPrompt(document.getElementById('accountHolderSelect').value, 'set'));
+            document.getElementById('editPasswordBtn').addEventListener('click', () => showPasswordPrompt(document.getElementById('accountHolderSelect').value, 'edit'));
+            document.getElementById('removePasswordBtn').addEventListener('click', () => showPasswordPrompt(document.getElementById('accountHolderSelect').value, 'remove'));
             document.getElementById('saveRecordBtn').addEventListener('click', saveRecord);
             document.getElementById('clearAllRecordsBtn').addEventListener('click', clearAllRecords);
             document.getElementById('exportToPDFBtn').addEventListener('click', exportToPDF);
@@ -494,7 +534,7 @@
 
         function getAccountHolders() {
             const encrypted = localStorage.getItem('accountHolders');
-            return encrypted ? decryptData(encrypted) : [];
+            return decryptData(encrypted);
         }
 
         function saveAccountHolders(accountHolders) {
@@ -535,14 +575,14 @@
                 saveAccountHolders(accountHolders);
                 loadAccountHolders();
                 document.getElementById('accountHolderSelect').value = newAccountHolderName;
-                showPasswordPrompt(newAccountHolderName); // Prompt for new password
+                showPasswordPrompt(newAccountHolderName, 'set'); // Prompt for new password
             }
             newAccountHolderInput.value = '';
         }
 
         function getAccountRecords(accountHolderName) {
             const encrypted = localStorage.getItem(`records_${accountHolderName}`);
-            return encrypted ? decryptData(encrypted) : [];
+            return decryptData(encrypted);
         }
 
         function saveAccountRecords(accountHolderName, records) {
@@ -917,7 +957,7 @@
 
         function getSavedInterest() {
             const encrypted = localStorage.getItem('savedInterest');
-            return encrypted ? decryptData(encrypted) : [];
+            return decryptData(encrypted);
         }
 
         function saveCalculatedInterest() {
