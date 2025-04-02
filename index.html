@@ -50,7 +50,7 @@
         .form-group label {
             margin-right: 10px;
         }
-        input[type="number"], input[type="date"], select {
+        input[type="number"], input[type="date"], input[type="file"], select {
             padding: 5px;
         }
         .hidden {
@@ -67,18 +67,18 @@
         }
     </style>
     <!-- Include jsPDF and jspdf-autotable for PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <!-- Include XLSX for Excel export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <!-- Include XLSX for Excel import/export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="form-group">
             <label>Account Holder: 
-                <select id="accountHolderSelect" onchange="loadAccountRecords()"></select>
+                <select id="accountHolderSelect"></select>
                 <input type="text" id="newAccountHolder" placeholder="New Account Holder">
-                <button onclick="addAccountHolder()">Add Account Holder</button>
+                <button id="addAccountHolderBtn">Add Account Holder</button>
             </label>
         </div>
         <h2>Fixed Deposit Record - <span id="accountHolderNameDisplay"></span></h2>
@@ -120,10 +120,12 @@
             <label>Interest Rate (% per annum): <input type="number" id="interestRate" min="0" step="0.1" value="5"></label>
             <label>FD Start Date: <input type="date" id="fdStartDate"></label>
             <input type="hidden" id="editIndex">
-            <button onclick="saveRecord()">Save Record</button>
-            <button onclick="clearAllRecords()">Clear All</button>
-            <button onclick="exportToPDF()">Export to PDF</button>
-            <button onclick="exportToExcel()">Export to Excel</button>
+            <button id="saveRecordBtn">Save Record</button>
+            <button id="clearAllRecordsBtn">Clear All</button>
+            <button id="exportToPDFBtn">Export to PDF</button>
+            <button id="exportToExcelBtn">Export to Excel</button>
+            <label>Import from Excel: <input type="file" id="importExcelFile" accept=".xlsx, .xls"></label>
+            <button id="importExcelBtn">Import</button>
         </div>
         
         <table>
@@ -148,7 +150,7 @@
             <h2>Interest Calculation</h2>
             <div class="form-group">
                 <label>Select FD Record:
-                    <select id="fdRecordSelect" onchange="updateInterestFields()"></select>
+                    <select id="fdRecordSelect"></select>
                 </label>
                 <label>Bank Name: <input type="text" id="interestBankName" readonly></label>
                 <label>Amount: <input type="number" id="interestAmount" readonly></label>
@@ -171,7 +173,7 @@
                 </label>
                 <label class="hidden">From Date: <input type="date" id="interestFromDate"></label>
                 <label class="hidden">To Date: <input type="date" id="interestToDate"></label>
-                <button onclick="calculateAndDisplayInterest()">Calculate Interest</button>
+                <button id="calculateInterestBtn">Calculate Interest</button>
                 <p>Calculated Interest: <span id="calculatedInterest">0</span></p>
             </div>
         </div>
@@ -194,14 +196,15 @@
                 </thead>
                 <tbody id="savedInterestList"></tbody>
             </table>
-            <button onclick="clearAllSavedInterest()">Clear All</button>
-            <button onclick="exportSavedInterestToPDF()">Export to PDF</button>
-            <button onclick="exportSavedInterestToExcel()">Export to Excel</button>
+            <button id="clearAllSavedInterestBtn">Clear All</button>
+            <button id="exportSavedInterestToPDFBtn">Export to PDF</button>
+            <button id="exportSavedInterestToExcelBtn">Export to Excel</button>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize UI
             loadAccountHolders();
             document.getElementById('customInterestAmountLabel').classList.add('hidden');
             document.getElementById('customInterestRateLabel').classList.add('hidden');
@@ -210,6 +213,29 @@
             document.querySelector('#interestFromDate').parentElement.classList.add('hidden');
             document.querySelector('#interestToDate').parentElement.classList.add('hidden');
             loadSavedInterest();
+
+            // Attach event listeners to buttons
+            document.getElementById('addAccountHolderBtn').addEventListener('click', addAccountHolder);
+            document.getElementById('saveRecordBtn').addEventListener('click', saveRecord);
+            document.getElementById('clearAllRecordsBtn').addEventListener('click', clearAllRecords);
+            document.getElementById('exportToPDFBtn').addEventListener('click', exportToPDF);
+            document.getElementById('exportToExcelBtn').addEventListener('click', exportToExcel);
+            document.getElementById('importExcelBtn').addEventListener('click', importFromExcel);
+            document.getElementById('calculateInterestBtn').addEventListener('click', calculateAndDisplayInterest);
+            document.getElementById('clearAllSavedInterestBtn').addEventListener('click', clearAllSavedInterest);
+            document.getElementById('exportSavedInterestToPDFBtn').addEventListener('click', exportSavedInterestToPDF);
+            document.getElementById('exportSavedInterestToExcelBtn').addEventListener('click', exportSavedInterestToExcel);
+
+            // Attach event listeners to dropdowns
+            document.getElementById('accountHolderSelect').addEventListener('change', loadAccountRecords);
+            document.getElementById('fdRecordSelect').addEventListener('change', updateInterestFields);
+            document.getElementById('interestCalculationPeriod').addEventListener('change', function() {
+                const period = this.value;
+                const customFields = ['customInterestAmountLabel', 'customInterestRateLabel', 'customInterestDurationLabel', 'customInterestDurationUnitLabel'];
+                const dateFields = document.querySelectorAll('#interestFromDate, #interestToDate');
+                customFields.forEach(id => document.getElementById(id).classList.toggle('hidden', period !== 'fullCustom'));
+                dateFields.forEach(field => field.parentElement.classList.toggle('hidden', period !== 'custom'));
+            });
         });
 
         function getAccountHolders() {
@@ -247,7 +273,6 @@
                 alert("Please enter a valid account holder name.");
                 return;
             }
-
             const accountHolders = getAccountHolders();
             if (!accountHolders.includes(newAccountHolderName)) {
                 accountHolders.push(newAccountHolderName);
@@ -301,11 +326,17 @@
                     <td>${record.fdRenewalDaysRemaining}</td>
                     <td>${record.interest.toFixed(2)}</td>
                     <td>
-                        <button onclick="editRecord('${accountHolderName}', ${index})">Edit</button>
-                        <button onclick="deleteRecord('${accountHolderName}', ${index})">Delete</button>
+                        <button class="editBtn" data-account="${accountHolderName}" data-index="${index}">Edit</button>
+                        <button class="deleteBtn" data-account="${accountHolderName}" data-index="${index}">Delete</button>
                     </td>
                 `;
                 tbody.appendChild(row);
+            });
+            document.querySelectorAll('.editBtn').forEach(btn => {
+                btn.addEventListener('click', () => editRecord(btn.dataset.account, btn.dataset.index));
+            });
+            document.querySelectorAll('.deleteBtn').forEach(btn => {
+                btn.addEventListener('click', () => deleteRecord(btn.dataset.account, btn.dataset.index));
             });
             populateFDRecordSelect(records);
         }
@@ -313,13 +344,9 @@
         function calculateMaturityDate(startDate, duration, unit) {
             const date = new Date(startDate);
             const durationValue = parseInt(duration);
-            if (unit === 'Days') {
-                date.setDate(date.getDate() + durationValue);
-            } else if (unit === 'Months') {
-                date.setMonth(date.getMonth() + durationValue);
-            } else if (unit === 'Years') {
-                date.setFullYear(date.getFullYear() + durationValue);
-            }
+            if (unit === 'Days') date.setDate(date.getDate() + durationValue);
+            else if (unit === 'Months') date.setMonth(date.getMonth() + durationValue);
+            else if (unit === 'Years') date.setFullYear(date.getFullYear() + durationValue);
             return date.toISOString().split('T')[0];
         }
 
@@ -334,27 +361,15 @@
             const principal = parseFloat(amount);
             const rate = parseFloat(interestRate) / 100;
             let days;
-
             if (fromDate && toDate) {
                 const start = new Date(fromDate);
                 const end = new Date(toDate);
                 days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
             } else {
-                if (unit === 'Days') {
-                    days = parseInt(duration);
-                } else if (unit === 'Months') {
-                    const start = new Date();
-                    const end = new Date(start);
-                    end.setMonth(start.getMonth() + parseInt(duration));
-                    days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-                } else if (unit === 'Years') {
-                    const start = new Date();
-                    const end = new Date(start);
-                    end.setFullYear(start.getFullYear() + parseInt(duration));
-                    days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-                }
+                if (unit === 'Days') days = parseInt(duration);
+                else if (unit === 'Months') days = Math.ceil((new Date().setMonth(new Date().getMonth() + parseInt(duration)) - new Date()) / (1000 * 60 * 60 * 24));
+                else if (unit === 'Years') days = Math.ceil((new Date().setFullYear(new Date().getFullYear() + parseInt(duration)) - new Date()) / (1000 * 60 * 60 * 24));
             }
-
             return (principal * rate * days) / 365.25;
         }
 
@@ -385,25 +400,11 @@
             const fdRenewalDaysRemaining = calculateRenewalDaysRemaining(fdMaturityDate);
             const interest = calculateInterest(amount, interestRate, duration, durationUnit);
             
-            const record = {
-                bankName,
-                amount,
-                duration,
-                durationUnit,
-                interestRate,
-                fdStartDate,
-                fdMaturityDate,
-                fdRenewalDaysRemaining,
-                interest
-            };
-            
+            const record = { bankName, amount, duration, durationUnit, interestRate, fdStartDate, fdMaturityDate, fdRenewalDaysRemaining, interest };
             let records = getAccountRecords(accountHolderName);
             const editIndex = document.getElementById('editIndex').value;
-            if (editIndex !== '') {
-                records[editIndex] = record;
-            } else {
-                records.push(record);
-            }
+            if (editIndex !== '') records[editIndex] = record;
+            else records.push(record);
             saveAccountRecords(accountHolderName, records);
             loadAccountRecords();
             clearInputs();
@@ -455,51 +456,108 @@
         }
 
         function exportToPDF() {
-            const accountHolderName = document.getElementById('accountHolderSelect').value;
-            const records = getAccountRecords(accountHolderName);
-            if (!records.length) {
-                alert("No records to export.");
-                return;
+            try {
+                const accountHolderName = document.getElementById('accountHolderSelect').value;
+                const records = getAccountRecords(accountHolderName);
+                if (!records.length) {
+                    alert("No records to export.");
+                    return;
+                }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.text(`Fixed Deposit Records - ${accountHolderName}`, 10, 10);
+                const tableData = records.map(r => [
+                    r.bankName, r.amount.toString(), r.duration.toString(), r.durationUnit, r.interestRate.toString(),
+                    formatDate(r.fdStartDate), formatDate(r.fdMaturityDate), r.fdRenewalDaysRemaining.toString(), r.interest.toFixed(2)
+                ]);
+                doc.autoTable({
+                    head: [['Bank Name', 'Amount', 'Duration', 'Unit', 'Rate', 'Start Date', 'Maturity Date', 'Days Remaining', 'Interest']],
+                    body: tableData,
+                    startY: 20
+                });
+                doc.save(`${accountHolderName}_FD_Records.pdf`);
+            } catch (error) {
+                console.error('Error exporting to PDF:', error);
+                alert('Failed to export to PDF. Check the console for details.');
             }
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text(`Fixed Deposit Records - ${accountHolderName}`, 10, 10);
-            const tableData = records.map(r => [
-                r.bankName, r.amount, r.duration, r.durationUnit, r.interestRate,
-                formatDate(r.fdStartDate), formatDate(r.fdMaturityDate), r.fdRenewalDaysRemaining, r.interest.toFixed(2)
-            ]);
-            doc.autoTable({
-                head: [['Bank Name', 'Amount', 'Duration', 'Unit', 'Rate', 'Start Date', 'Maturity Date', 'Days Remaining', 'Interest']],
-                body: tableData,
-                startY: 20
-            });
-            doc.save(`${accountHolderName}_FD_Records.pdf`);
         }
 
         function exportToExcel() {
+            try {
+                const accountHolderName = document.getElementById('accountHolderSelect').value;
+                const records = getAccountRecords(accountHolderName);
+                if (!records.length) {
+                    alert("No records to export.");
+                    return;
+                }
+                const data = records.map(r => ({
+                    'Bank Name': r.bankName,
+                    'Amount': r.amount,
+                    'Duration': r.duration,
+                    'Unit': r.durationUnit,
+                    'Interest Rate': r.interestRate,
+                    'Start Date': formatDate(r.fdStartDate),
+                    'Maturity Date': formatDate(r.fdMaturityDate),
+                    'Days Remaining': r.fdRenewalDaysRemaining,
+                    'Interest': r.interest.toFixed(2)
+                }));
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'FD Records');
+                XLSX.writeFile(wb, `${accountHolderName}_FD_Records.xlsx`);
+            } catch (error) {
+                console.error('Error exporting to Excel:', error);
+                alert('Failed to export to Excel. Check the console for details.');
+            }
+        }
+
+        function importFromExcel() {
             const accountHolderName = document.getElementById('accountHolderSelect').value;
-            const records = getAccountRecords(accountHolderName);
-            if (!records.length) {
-                alert("No records to export.");
+            if (!accountHolderName) {
+                alert("Please select an account holder before importing.");
                 return;
             }
-
-            const data = records.map(r => ({
-                'Bank Name': r.bankName,
-                'Amount': r.amount,
-                'Duration': r.duration,
-                'Unit': r.durationUnit,
-                'Interest Rate': r.interestRate,
-                'Start Date': formatDate(r.fdStartDate),
-                'Maturity Date': formatDate(r.fdMaturityDate),
-                'Days Remaining': r.fdRenewalDaysRemaining,
-                'Interest': r.interest.toFixed(2)
-            }));
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'FD Records');
-            XLSX.writeFile(wb, `${accountHolderName}_FD_Records.xlsx`);
+            const fileInput = document.getElementById('importExcelFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select an Excel file to import.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet);
+                    const records = jsonData.map(row => {
+                        const bankName = row['Bank Name'] || '';
+                        const amount = parseFloat(row['Amount']) || 0;
+                        const duration = parseInt(row['Duration']) || 0;
+                        const durationUnit = row['Unit'] || 'Days';
+                        const interestRate = parseFloat(row['Interest Rate']) || 0;
+                        const fdStartDate = row['Start Date'] || '';
+                        if (!validateInputs(bankName, amount, duration, interestRate, fdStartDate)) {
+                            throw new Error(`Invalid data in row: ${JSON.stringify(row)}`);
+                        }
+                        const fdMaturityDate = calculateMaturityDate(fdStartDate, duration, durationUnit);
+                        const fdRenewalDaysRemaining = calculateRenewalDaysRemaining(fdMaturityDate);
+                        const interest = calculateInterest(amount, interestRate, duration, durationUnit);
+                        return { bankName, amount, duration, durationUnit, interestRate, fdStartDate, fdMaturityDate, fdRenewalDaysRemaining, interest };
+                    });
+                    let existingRecords = getAccountRecords(accountHolderName);
+                    existingRecords = existingRecords.concat(records);
+                    saveAccountRecords(accountHolderName, existingRecords);
+                    loadAccountRecords();
+                    alert("Records imported successfully!");
+                    fileInput.value = '';
+                } catch (error) {
+                    console.error('Error importing from Excel:', error);
+                    alert('Failed to import records. Check the console for details.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
         }
 
         function populateFDRecordSelect(records) {
@@ -518,7 +576,6 @@
             const accountHolderName = document.getElementById('accountHolderSelect').value;
             const records = getAccountRecords(accountHolderName);
             const fdRecordIndex = document.getElementById('fdRecordSelect').value;
-
             if (records && records[fdRecordIndex]) {
                 const record = records[fdRecordIndex];
                 document.getElementById('interestBankName').value = record.bankName;
@@ -528,15 +585,6 @@
                 document.getElementById('interestAmount').value = '';
             }
         }
-
-        document.getElementById('interestCalculationPeriod').addEventListener('change', function() {
-            const period = this.value;
-            const customFields = ['customInterestAmountLabel', 'customInterestRateLabel', 'customInterestDurationLabel', 'customInterestDurationUnitLabel'];
-            const dateFields = document.querySelectorAll('#interestFromDate, #interestToDate');
-
-            customFields.forEach(id => document.getElementById(id).classList.toggle('hidden', period !== 'fullCustom'));
-            dateFields.forEach(field => field.parentElement.classList.toggle('hidden', period !== 'custom'));
-        });
 
         let calculatedInterestValue = 0;
         let calculatedInterestRecord = {};
@@ -548,7 +596,6 @@
             }
             const records = getAccountRecords(accountHolderName);
             const fdRecordIndex = document.getElementById('fdRecordSelect').value;
-
             if (!records || records.length === 0) {
                 document.getElementById('calculatedInterest').textContent = "No records found.";
                 return;
@@ -558,7 +605,6 @@
                 return;
             }
             const record = records[fdRecordIndex];
-
             let amount = record.amount;
             let interestRate = record.interestRate;
             let duration = record.duration;
@@ -566,35 +612,27 @@
             const period = document.getElementById('interestCalculationPeriod').value;
             const fromDate = document.getElementById('interestFromDate').value;
             const toDate = document.getElementById('interestToDate').value;
-
             if (period === 'fullCustom') {
                 amount = parseFloat(document.getElementById('customInterestAmount').value) || 0;
                 interestRate = parseFloat(document.getElementById('customInterestRate').value) || 0;
                 duration = parseFloat(document.getElementById('customInterestDuration').value) || 0;
                 unit = document.getElementById('customInterestDurationUnit').value;
-
                 if (amount <= 0 || interestRate < 0 || duration <= 0) {
                     document.getElementById('calculatedInterest').textContent = "Please enter valid values.";
                     return;
                 }
             }
-
             let interest = 0;
-            if (period === 'whole') {
-                interest = calculateInterest(amount, interestRate, duration, unit);
-            } else if (period === 'custom') {
+            if (period === 'whole') interest = calculateInterest(amount, interestRate, duration, unit);
+            else if (period === 'custom') {
                 if (!fromDate || !toDate || new Date(fromDate) > new Date(toDate)) {
                     document.getElementById('calculatedInterest').textContent = "Please select valid From and To dates.";
                     return;
                 }
                 interest = calculateInterest(amount, interestRate, duration, unit, fromDate, toDate);
-            } else if (period === 'fullCustom') {
-                interest = calculateInterest(amount, interestRate, duration, unit);
-            }
-
+            } else if (period === 'fullCustom') interest = calculateInterest(amount, interestRate, duration, unit);
             calculatedInterestValue = interest.toFixed(2);
             document.getElementById('calculatedInterest').textContent = calculatedInterestValue;
-
             calculatedInterestRecord = {
                 accountHolderName,
                 bankName: document.getElementById('interestBankName').value,
@@ -636,11 +674,17 @@
                     <td>${record.interestCalculationPeriod}</td>
                     <td>${record.interest}</td>
                     <td>
-                        <button onclick="editSavedInterest(${index})">Edit</button>
-                        <button onclick="deleteSavedInterest(${index})">Delete</button>
+                        <button class="editSavedBtn" data-index="${index}">Edit</button>
+                        <button class="deleteSavedBtn" data-index="${index}">Delete</button>
                     </td>
                 `;
                 savedInterestList.appendChild(row);
+            });
+            document.querySelectorAll('.editSavedBtn').forEach(btn => {
+                btn.addEventListener('click', () => editSavedInterest(btn.dataset.index));
+            });
+            document.querySelectorAll('.deleteSavedBtn').forEach(btn => {
+                btn.addEventListener('click', () => deleteSavedInterest(btn.dataset.index));
             });
         }
 
@@ -648,7 +692,6 @@
             if (confirm("Are you sure you want to edit this saved interest record?")) {
                 const savedInterestRecords = getSavedInterest();
                 const record = savedInterestRecords[index];
-
                 document.getElementById('accountHolderSelect').value = record.accountHolderName;
                 loadAccountRecords();
                 document.getElementById('interestBankName').value = record.bankName;
@@ -660,7 +703,6 @@
                 document.getElementById('interestCalculationPeriod').value = record.interestCalculationPeriod;
                 calculatedInterestValue = record.interest;
                 document.getElementById('calculatedInterest').textContent = calculatedInterestValue;
-
                 savedInterestRecords.splice(index, 1);
                 localStorage.setItem('savedInterest', JSON.stringify(savedInterestRecords));
                 loadSavedInterest();
@@ -684,48 +726,56 @@
         }
 
         function exportSavedInterestToPDF() {
-            const savedInterestRecords = getSavedInterest();
-            if (!savedInterestRecords.length) {
-                alert("No saved interest records to export.");
-                return;
+            try {
+                const savedInterestRecords = getSavedInterest();
+                if (!savedInterestRecords.length) {
+                    alert("No saved interest records to export.");
+                    return;
+                }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.text("Saved Interest Records", 10, 10);
+                const tableData = savedInterestRecords.map(r => [
+                    r.accountHolderName, r.bankName, r.amount.toString(), r.interestRate.toString(),
+                    formatDate(r.fdStartDate), formatDate(r.fdMaturityDate), r.interestCalculationPeriod, r.interest
+                ]);
+                doc.autoTable({
+                    head: [['Holder', 'Bank Name', 'Amount', 'Rate', 'Start Date', 'End Date', 'Period', 'Interest']],
+                    body: tableData,
+                    startY: 20
+                });
+                doc.save('Saved_Interest_Records.pdf');
+            } catch (error) {
+                console.error('Error exporting saved interest to PDF:', error);
+                alert('Failed to export saved interest to PDF. Check the console for details.');
             }
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("Saved Interest Records", 10, 10);
-            const tableData = savedInterestRecords.map(r => [
-                r.accountHolderName, r.bankName, r.amount, r.interestRate,
-                formatDate(r.fdStartDate), formatDate(r.fdMaturityDate), r.interestCalculationPeriod, r.interest
-            ]);
-            doc.autoTable({
-                head: [['Holder', 'Bank Name', 'Amount', 'Rate', 'Start Date', 'End Date', 'Period', 'Interest']],
-                body: tableData,
-                startY: 20
-            });
-            doc.save('Saved_Interest_Records.pdf');
         }
 
         function exportSavedInterestToExcel() {
-            const savedInterestRecords = getSavedInterest();
-            if (!savedInterestRecords.length) {
-                alert("No saved interest records to export.");
-                return;
+            try {
+                const savedInterestRecords = getSavedInterest();
+                if (!savedInterestRecords.length) {
+                    alert("No saved interest records to export.");
+                    return;
+                }
+                const data = savedInterestRecords.map(r => ({
+                    'Account Holder': r.accountHolderName,
+                    'Bank Name': r.bankName,
+                    'Amount': r.amount,
+                    'Interest Rate': r.interestRate,
+                    'Start Date': formatDate(r.fdStartDate),
+                    'End Date': formatDate(r.fdMaturityDate),
+                    'Period': r.interestCalculationPeriod,
+                    'Interest': r.interest
+                }));
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Saved Interest');
+                XLSX.writeFile(wb, 'Saved_Interest_Records.xlsx');
+            } catch (error) {
+                console.error('Error exporting saved interest to Excel:', error);
+                alert('Failed to export saved interest to Excel. Check the console for details.');
             }
-
-            const data = savedInterestRecords.map(r => ({
-                'Account Holder': r.accountHolderName,
-                'Bank Name': r.bankName,
-                'Amount': r.amount,
-                'Interest Rate': r.interestRate,
-                'Start Date': formatDate(r.fdStartDate),
-                'End Date': formatDate(r.fdMaturityDate),
-                'Period': r.interestCalculationPeriod,
-                'Interest': r.interest
-            }));
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Saved Interest');
-            XLSX.writeFile(wb, 'Saved_Interest_Records.xlsx');
         }
     </script>
 </body>
