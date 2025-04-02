@@ -5,156 +5,210 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fixed Deposit Record</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        button { margin: 5px; }
-        #accountHolderSelect { margin-bottom: 10px; }
-        .interest-section { margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px; }
-        .saved-interest-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.6;
         }
-        .saved-interest-table th, .saved-interest-table td {
-            border: 1px solid #ddd;
-            padding: 8px; text-align: left;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        .saved-interest-table th {
-            background-color: #f2f2f2;
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #f2f2f2; 
+        }
+        button { 
+            margin: 5px; 
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        #accountHolderSelect { 
+            margin-bottom: 10px; 
+        }
+        .interest-section, .saved-interest-section { 
+            margin-top: 30px; 
+            border-top: 1px solid #ddd; 
+            padding-top: 20px; 
+        }
+        .form-group {
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .form-group label {
+            margin-right: 10px;
+        }
+        input[type="number"], input[type="date"], select {
+            padding: 5px;
+        }
+        .hidden {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .form-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            table {
+                font-size: 14px;
+            }
         }
     </style>
+    <!-- Include jsPDF and jspdf-autotable for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <!-- Include XLSX for Excel export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
 </head>
 <body>
-    <label>Account Holder Name: 
-        <select id="accountHolderSelect" onchange="loadAccountRecords()">
-        </select>
-        <input type="text" id="newAccountHolder" placeholder="New Account Holder">
-        <button onclick="addAccountHolder()">Add Account Holder</button>
-    </label>
-    <h2>Fixed Deposit Record - <span id="accountHolderNameDisplay"></span></h2>
+    <div class="container">
+        <div class="form-group">
+            <label>Account Holder: 
+                <select id="accountHolderSelect" onchange="loadAccountRecords()"></select>
+                <input type="text" id="newAccountHolder" placeholder="New Account Holder">
+                <button onclick="addAccountHolder()">Add Account Holder</button>
+            </label>
+        </div>
+        <h2>Fixed Deposit Record - <span id="accountHolderNameDisplay"></span></h2>
 
-    <label>Bank Name: 
-        <select id="bankName">
-            <option value="Nabil Bank">Nabil Bank</option>
-            <option value="Nepal Investment Bank">Nepal Investment Bank</option>
-            <option value="Standard Chartered Bank">Standard Chartered Bank</option>
-            <option value="NIC Asia Bank">NIC Asia Bank</option>
-            <option value="Himalayan Bank">Himalayan Bank</option>
-            <option value="Global IME Bank">Global IME Bank</option>
-            <option value="Siddhartha Bank">Siddhartha Bank</option>
-            <option value="Prime Commercial Bank">Prime Commercial Bank</option>
-            <option value="Everest Bank">Everest Bank</option>
-            <option value="Citizens Bank">Citizens Bank</option>
-            <option value="Sanima Bank">Sanima Bank</option>
-            <option value="Kumari Bank">Kumari Bank</option>
-            <option value="Laxmi Bank</option>
-            <option value="Machhapuchchhre Bank">Machhapuchchhre Bank</option>
-            <option value="Mega Bank">Mega Bank</option>
-            <option value="Sunrise Bank">Sunrise Bank</option>
-            <option value="NMB Bank">NMB Bank</option>
-            <option value="Prabhu Bank">Prabhu Bank</option>
-            <option value="Civil Bank">Civil Bank</option>
-            <option value="Century Commercial Bank">Century Commercial Bank</option>
-        </select>
-    </label>
-    <label>Amount: <input type="number" id="amount"></label>
-    <label>Duration: <input type="number" id="duration">
-        <select id="durationUnit">
-            <option value="Days">Days</option>
-            <option value="Months">Months</option>
-            <option value="Years">Years</option>
-        </select>
-    </label>
-    <label>Interest Rate (% per annum): <input type="number" id="interestRate" value="5"></label>
-    <label>FD Start Date: <input type="date" id="fdStartDate"></label>
-    
-    <input type="hidden" id="editIndex">
-    <button onclick="saveRecord()">Save Record</button>
-    <button onclick="clearAllRecords()">Clear All</button>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>Bank Name</th>
-                <th>Amount</th>
-                <th>Duration</th>
-                <th>Duration Unit</th>
-                <th>Interest Rate</th>
-                <th>FD Start Date</th>
-                <th>FD Maturity Date</th>
-                <th>FD Renewal Days Remaining</th>
-                <th>Interest</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="records"></tbody>
-    </table>
-
-    <div class="interest-section">
-        <h2>Interest Calculation</h2>
-        <label>Select FD Record:
-            <select id="fdRecordSelect" onchange="updateInterestFields()">
-            </select>
-        </label>
-        <label>Bank Name: <input type="text" id="interestBankName" readonly></label>
-        <label>Amount: <input type="number" id="interestAmount" readonly></label>
-        <label>Interest Calculation Period:
-            <select id="interestCalculationPeriod">
-                <option value="whole">Whole FD Period</option>
-                <option value="custom">Custom Date Range</option>
-                <option value="fullCustom">Full Custom Input</option>
-            </select>
-        </label>
-        <label id="customInterestAmountLabel">Amount: <input type="number" id="customInterestAmount"></label>
-        <label id="customInterestRateLabel">Interest Rate (% per annum): <input type="number" id="customInterestRate"></label>
-        <label id="customInterestDurationLabel">Duration: <input type="number" id="customInterestDuration"></label>
-        <label id="customInterestDurationUnitLabel">
-            <select id="customInterestDurationUnit">
-                <option value="Days">Days</option>
-                <option value="Months">Months</option>
-                <option value="Years">Years</option>
-            </select>
-        </label>
-        <label>From Date: <input type="date" id="interestFromDate"></label>
-        <label>To Date: <input type="date" id="interestToDate"></label>
-        <button onclick="calculateAndDisplayInterest()">Calculate Interest</button>
-        <p>Calculated Interest: <span id="calculatedInterest">0</span></p>
-    </div>
-
-    <div class="saved-interest-section">
-        <h2>Saved Interest Records</h2>
-        <table class="saved-interest-table">
+        <div class="form-group">
+            <label>Bank Name: 
+                <select id="bankName">
+                    <option value="Nabil Bank">Nabil Bank</option>
+                    <option value="Nepal Investment Bank">Nepal Investment Bank</option>
+                    <option value="Standard Chartered Bank">Standard Chartered Bank</option>
+                    <option value="NIC Asia Bank">NIC Asia Bank</option>
+                    <option value="Himalayan Bank">Himalayan Bank</option>
+                    <option value="Global IME Bank">Global IME Bank</option>
+                    <option value="Siddhartha Bank">Siddhartha Bank</option>
+                    <option value="Prime Commercial Bank">Prime Commercial Bank</option>
+                    <option value="Everest Bank">Everest Bank</option>
+                    <option value="Citizens Bank">Citizens Bank</option>
+                    <option value="Sanima Bank">Sanima Bank</option>
+                    <option value="Kumari Bank">Kumari Bank</option>
+                    <option value="Laxmi Bank">Laxmi Bank</option>
+                    <option value="Machhapuchchhre Bank">Machhapuchchhre Bank</option>
+                    <option value="Mega Bank">Mega Bank</option>
+                    <option value="Sunrise Bank">Sunrise Bank</option>
+                    <option value="NMB Bank">NMB Bank</option>
+                    <option value="Prabhu Bank">Prabhu Bank</option>
+                    <option value="Civil Bank">Civil Bank</option>
+                    <option value="Century Commercial Bank">Century Commercial Bank</option>
+                </select>
+            </label>
+            <label>Amount: <input type="number" id="amount" min="0" step="0.01"></label>
+            <label>Duration: 
+                <input type="number" id="duration" min="1">
+                <select id="durationUnit">
+                    <option value="Days">Days</option>
+                    <option value="Months">Months</option>
+                    <option value="Years">Years</option>
+                </select>
+            </label>
+            <label>Interest Rate (% per annum): <input type="number" id="interestRate" min="0" step="0.1" value="5"></label>
+            <label>FD Start Date: <input type="date" id="fdStartDate"></label>
+            <input type="hidden" id="editIndex">
+            <button onclick="saveRecord()">Save Record</button>
+            <button onclick="clearAllRecords()">Clear All</button>
+            <button onclick="exportToPDF()">Export to PDF</button>
+            <button onclick="exportToExcel()">Export to Excel</button>
+        </div>
+        
+        <table>
             <thead>
                 <tr>
-                    <th>Account Holder</th>
                     <th>Bank Name</th>
                     <th>Amount</th>
+                    <th>Duration</th>
+                    <th>Duration Unit</th>
                     <th>Interest Rate</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>Interest Calculation Period</th>
+                    <th>FD Start Date</th>
+                    <th>FD Maturity Date</th>
+                    <th>FD Renewal Days Remaining</th>
                     <th>Interest</th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody id="savedInterestList">
-            </tbody>
+            <tbody id="records"></tbody>
         </table>
-        <button onclick="clearAllSavedInterest()">Clear All</button>
+
+        <div class="interest-section">
+            <h2>Interest Calculation</h2>
+            <div class="form-group">
+                <label>Select FD Record:
+                    <select id="fdRecordSelect" onchange="updateInterestFields()"></select>
+                </label>
+                <label>Bank Name: <input type="text" id="interestBankName" readonly></label>
+                <label>Amount: <input type="number" id="interestAmount" readonly></label>
+                <label>Interest Calculation Period:
+                    <select id="interestCalculationPeriod">
+                        <option value="whole">Whole FD Period</option>
+                        <option value="custom">Custom Date Range</option>
+                        <option value="fullCustom">Full Custom Input</option>
+                    </select>
+                </label>
+                <label class="hidden" id="customInterestAmountLabel">Amount: <input type="number" id="customInterestAmount" min="0" step="0.01"></label>
+                <label class="hidden" id="customInterestRateLabel">Interest Rate (% per annum): <input type="number" id="customInterestRate" min="0" step="0.1"></label>
+                <label class="hidden" id="customInterestDurationLabel">Duration: <input type="number" id="customInterestDuration" min="1"></label>
+                <label class="hidden" id="customInterestDurationUnitLabel">
+                    <select id="customInterestDurationUnit">
+                        <option value="Days">Days</option>
+                        <option value="Months">Months</option>
+                        <option value="Years">Years</option>
+                    </select>
+                </label>
+                <label class="hidden">From Date: <input type="date" id="interestFromDate"></label>
+                <label class="hidden">To Date: <input type="date" id="interestToDate"></label>
+                <button onclick="calculateAndDisplayInterest()">Calculate Interest</button>
+                <p>Calculated Interest: <span id="calculatedInterest">0</span></p>
+            </div>
+        </div>
+
+        <div class="saved-interest-section">
+            <h2>Saved Interest Records</h2>
+            <table class="saved-interest-table">
+                <thead>
+                    <tr>
+                        <th>Account Holder</th>
+                        <th>Bank Name</th>
+                        <th>Amount</th>
+                        <th>Interest Rate</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Interest Calculation Period</th>
+                        <th>Interest</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="savedInterestList"></tbody>
+            </table>
+            <button onclick="clearAllSavedInterest()">Clear All</button>
+            <button onclick="exportSavedInterestToPDF()">Export to PDF</button>
+            <button onclick="exportSavedInterestToExcel()">Export to Excel</button>
+        </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             loadAccountHolders();
-            // Initially hide custom inputs
-            document.getElementById('customInterestAmountLabel').style.display = 'none';
-            document.getElementById('customInterestRateLabel').style.display = 'none';
-            document.getElementById('customInterestDurationLabel').style.display = 'none';
-            document.getElementById('customInterestDurationUnitLabel').style.display = 'none';
+            document.getElementById('customInterestAmountLabel').classList.add('hidden');
+            document.getElementById('customInterestRateLabel').classList.add('hidden');
+            document.getElementById('customInterestDurationLabel').classList.add('hidden');
+            document.getElementById('customInterestDurationUnitLabel').classList.add('hidden');
+            document.querySelector('#interestFromDate').parentElement.classList.add('hidden');
+            document.querySelector('#interestToDate').parentElement.classList.add('hidden');
             loadSavedInterest();
         });
 
@@ -189,7 +243,10 @@
         function addAccountHolder() {
             const newAccountHolderInput = document.getElementById('newAccountHolder');
             const newAccountHolderName = newAccountHolderInput.value.trim();
-            if (newAccountHolderName === "") return;
+            if (!newAccountHolderName) {
+                alert("Please enter a valid account holder name.");
+                return;
+            }
 
             const accountHolders = getAccountHolders();
             if (!accountHolders.includes(newAccountHolderName)) {
@@ -222,15 +279,12 @@
 
         function formatDate(dateString) {
             const date = new Date(dateString);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            return date.toISOString().split('T')[0];
         }
 
         function loadAccountRecords() {
             const accountHolderName = document.getElementById('accountHolderSelect').value;
-            document.getElementById('accountHolderNameDisplay').textContent = accountHolderName;
+            document.getElementById('accountHolderNameDisplay').textContent = accountHolderName || "No Account Holder Selected";
             const records = getAccountRecords(accountHolderName);
             const tbody = document.getElementById('records');
             tbody.innerHTML = '';
@@ -258,7 +312,7 @@
 
         function calculateMaturityDate(startDate, duration, unit) {
             const date = new Date(startDate);
-            let durationValue = parseInt(duration);
+            const durationValue = parseInt(duration);
             if (unit === 'Days') {
                 date.setDate(date.getDate() + durationValue);
             } else if (unit === 'Months') {
@@ -272,41 +326,61 @@
         function calculateRenewalDaysRemaining(maturityDate) {
             const today = new Date();
             const maturity = new Date(maturityDate);
-            const diffTime = maturity.getTime() - today.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays;
+            const diffTime = maturity - today;
+            return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
         }
 
         function calculateInterest(amount, interestRate, duration, unit, fromDate, toDate) {
-            let interest = 0;
             const principal = parseFloat(amount);
             const rate = parseFloat(interestRate) / 100;
-            let days = 0;
+            let days;
 
             if (fromDate && toDate) {
                 const start = new Date(fromDate);
                 const end = new Date(toDate);
                 days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-            } else if (unit === 'Days') {
-                days = parseInt(duration);
-            } else if (unit === 'Months') {
-                days = parseInt(duration) * 30; 
-            } else if (unit === 'Years') {
-                days = parseInt(duration) * 365;
+            } else {
+                if (unit === 'Days') {
+                    days = parseInt(duration);
+                } else if (unit === 'Months') {
+                    const start = new Date();
+                    const end = new Date(start);
+                    end.setMonth(start.getMonth() + parseInt(duration));
+                    days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                } else if (unit === 'Years') {
+                    const start = new Date();
+                    const end = new Date(start);
+                    end.setFullYear(start.getFullYear() + parseInt(duration));
+                    days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                }
             }
 
-            interest = (principal * rate * days) / 365;
-            return interest;
+            return (principal * rate * days) / 365.25;
+        }
+
+        function validateInputs(bankName, amount, duration, interestRate, fdStartDate) {
+            if (!bankName || amount <= 0 || duration <= 0 || interestRate < 0 || !fdStartDate) {
+                alert("Please fill all fields with valid values (Amount > 0, Duration > 0, Interest Rate >= 0).");
+                return false;
+            }
+            return true;
         }
 
         function saveRecord() {
             const accountHolderName = document.getElementById('accountHolderSelect').value;
+            if (!accountHolderName) {
+                alert("Please select or add an account holder first.");
+                return;
+            }
             const bankName = document.getElementById('bankName').value;
-            const amount = document.getElementById('amount').value;
-            const duration = document.getElementById('duration').value;
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const duration = parseInt(document.getElementById('duration').value) || 0;
             const durationUnit = document.getElementById('durationUnit').value;
-            const interestRate = document.getElementById('interestRate').value;
+            const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
             const fdStartDate = document.getElementById('fdStartDate').value;
+
+            if (!validateInputs(bankName, amount, duration, interestRate, fdStartDate)) return;
+
             const fdMaturityDate = calculateMaturityDate(fdStartDate, duration, durationUnit);
             const fdRenewalDaysRemaining = calculateRenewalDaysRemaining(fdMaturityDate);
             const interest = calculateInterest(amount, interestRate, duration, durationUnit);
@@ -325,7 +399,7 @@
             
             let records = getAccountRecords(accountHolderName);
             const editIndex = document.getElementById('editIndex').value;
-            if (editIndex) {
+            if (editIndex !== '') {
                 records[editIndex] = record;
             } else {
                 records.push(record);
@@ -359,7 +433,7 @@
         }
 
         function clearInputs() {
-            document.getElementById('bankName').value = '';
+            document.getElementById('bankName').value = 'Nabil Bank';
             document.getElementById('amount').value = '';
             document.getElementById('duration').value = '';
             document.getElementById('durationUnit').value = 'Days';
@@ -369,11 +443,63 @@
         }
 
         function clearAllRecords() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            if (!accountHolderName) {
+                alert("No account holder selected.");
+                return;
+            }
             if (confirm("Are you sure you want to clear all records for this account holder?")) {
-                const accountHolderName = document.getElementById('accountHolderSelect').value;
                 localStorage.removeItem(accountHolderName);
                 loadAccountRecords();
             }
+        }
+
+        function exportToPDF() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            const records = getAccountRecords(accountHolderName);
+            if (!records.length) {
+                alert("No records to export.");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text(`Fixed Deposit Records - ${accountHolderName}`, 10, 10);
+            const tableData = records.map(r => [
+                r.bankName, r.amount, r.duration, r.durationUnit, r.interestRate,
+                formatDate(r.fdStartDate), formatDate(r.fdMaturityDate), r.fdRenewalDaysRemaining, r.interest.toFixed(2)
+            ]);
+            doc.autoTable({
+                head: [['Bank Name', 'Amount', 'Duration', 'Unit', 'Rate', 'Start Date', 'Maturity Date', 'Days Remaining', 'Interest']],
+                body: tableData,
+                startY: 20
+            });
+            doc.save(`${accountHolderName}_FD_Records.pdf`);
+        }
+
+        function exportToExcel() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            const records = getAccountRecords(accountHolderName);
+            if (!records.length) {
+                alert("No records to export.");
+                return;
+            }
+
+            const data = records.map(r => ({
+                'Bank Name': r.bankName,
+                'Amount': r.amount,
+                'Duration': r.duration,
+                'Unit': r.durationUnit,
+                'Interest Rate': r.interestRate,
+                'Start Date': formatDate(r.fdStartDate),
+                'Maturity Date': formatDate(r.fdMaturityDate),
+                'Days Remaining': r.fdRenewalDaysRemaining,
+                'Interest': r.interest.toFixed(2)
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'FD Records');
+            XLSX.writeFile(wb, `${accountHolderName}_FD_Records.xlsx`);
         }
 
         function populateFDRecordSelect(records) {
@@ -381,16 +507,11 @@
             fdRecordSelect.innerHTML = '';
             records.forEach((record, index) => {
                 const option = document.createElement('option');
-                option.value = index; 
+                option.value = index;
                 option.textContent = `${record.bankName} - ${record.amount}`;
                 fdRecordSelect.appendChild(option);
             });
-            if(records.length > 0) {
-               updateInterestFields();
-            } else {
-                document.getElementById('interestBankName').value = '';
-                document.getElementById('interestAmount').value = '';
-            }
+            if (records.length > 0) updateInterestFields();
         }
 
         function updateInterestFields() {
@@ -402,47 +523,37 @@
                 const record = records[fdRecordIndex];
                 document.getElementById('interestBankName').value = record.bankName;
                 document.getElementById('interestAmount').value = record.amount;
+            } else {
+                document.getElementById('interestBankName').value = '';
+                document.getElementById('interestAmount').value = '';
             }
         }
 
         document.getElementById('interestCalculationPeriod').addEventListener('change', function() {
             const period = this.value;
-            if (period === 'fullCustom') {
-                document.getElementById('customInterestAmountLabel').style.display = 'block';
-                document.getElementById('customInterestRateLabel').style.display = 'block';
-                document.getElementById('customInterestDurationLabel').style.display = 'block';
-                document.getElementById('customInterestDurationUnitLabel').style.display = 'block';
-                document.getElementById('interestFromDate').style.display = 'none';
-                document.getElementById('interestToDate').style.display = 'none';
-            } else if (period === 'custom') {
-                document.getElementById('customInterestAmountLabel').style.display = 'none';
-                document.getElementById('customInterestRateLabel').style.display = 'none';
-                document.getElementById('customInterestDurationLabel').style.display = 'none';
-                document.getElementById('customInterestDurationUnitLabel').style.display = 'none';
-                document.getElementById('interestFromDate').style.display = 'inline-block';
-                document.getElementById('interestToDate').style.display = 'inline-block';
-            } else {
-                document.getElementById('customInterestAmountLabel').style.display = 'none';
-                document.getElementById('customInterestRateLabel').style.display = 'none';
-                document.getElementById('customInterestDurationLabel').style.display = 'none';
-                document.getElementById('customInterestDurationUnitLabel').style.display = 'none';
-                document.getElementById('interestFromDate').style.display = 'none';
-                document.getElementById('interestToDate').style.display = 'none';
-            }
+            const customFields = ['customInterestAmountLabel', 'customInterestRateLabel', 'customInterestDurationLabel', 'customInterestDurationUnitLabel'];
+            const dateFields = document.querySelectorAll('#interestFromDate, #interestToDate');
+
+            customFields.forEach(id => document.getElementById(id).classList.toggle('hidden', period !== 'fullCustom'));
+            dateFields.forEach(field => field.parentElement.classList.toggle('hidden', period !== 'custom'));
         });
 
         let calculatedInterestValue = 0;
         let calculatedInterestRecord = {};
         function calculateAndDisplayInterest() {
             const accountHolderName = document.getElementById('accountHolderSelect').value;
+            if (!accountHolderName) {
+                document.getElementById('calculatedInterest').textContent = "No account holder selected.";
+                return;
+            }
             const records = getAccountRecords(accountHolderName);
             const fdRecordIndex = document.getElementById('fdRecordSelect').value;
 
             if (!records || records.length === 0) {
-                document.getElementById('calculatedInterest').textContent = "No records found for this account holder.";
+                document.getElementById('calculatedInterest').textContent = "No records found.";
                 return;
             }
-            if (records && !records[fdRecordIndex]) {
+            if (!records[fdRecordIndex]) {
                 document.getElementById('calculatedInterest').textContent = "No FD Record Selected.";
                 return;
             }
@@ -457,40 +568,39 @@
             const toDate = document.getElementById('interestToDate').value;
 
             if (period === 'fullCustom') {
-                amount = parseFloat(document.getElementById('customInterestAmount').value);
-                interestRate = parseFloat(document.getElementById('customInterestRate').value);
-                duration = parseFloat(document.getElementById('customInterestDuration').value);
+                amount = parseFloat(document.getElementById('customInterestAmount').value) || 0;
+                interestRate = parseFloat(document.getElementById('customInterestRate').value) || 0;
+                duration = parseFloat(document.getElementById('customInterestDuration').value) || 0;
                 unit = document.getElementById('customInterestDurationUnit').value;
 
-                if (isNaN(amount) || isNaN(interestRate) || isNaN(duration)) {
-                    document.getElementById('calculatedInterest').textContent = "Please enter valid values for Amount, Interest Rate, and Duration.";
+                if (amount <= 0 || interestRate < 0 || duration <= 0) {
+                    document.getElementById('calculatedInterest').textContent = "Please enter valid values.";
                     return;
                 }
             }
 
             let interest = 0;
-
-             if (period === 'whole') {
+            if (period === 'whole') {
                 interest = calculateInterest(amount, interestRate, duration, unit);
             } else if (period === 'custom') {
-                if (!fromDate || !toDate) {
-                    document.getElementById('calculatedInterest').textContent = "Please select both From and To dates.";
+                if (!fromDate || !toDate || new Date(fromDate) > new Date(toDate)) {
+                    document.getElementById('calculatedInterest').textContent = "Please select valid From and To dates.";
                     return;
                 }
                 interest = calculateInterest(amount, interestRate, duration, unit, fromDate, toDate);
             } else if (period === 'fullCustom') {
-                 interest = calculateInterest(amount, interestRate, duration, unit);
+                interest = calculateInterest(amount, interestRate, duration, unit);
             }
 
             calculatedInterestValue = interest.toFixed(2);
             document.getElementById('calculatedInterest').textContent = calculatedInterestValue;
 
             calculatedInterestRecord = {
-                accountHolderName: accountHolderName,
+                accountHolderName,
                 bankName: document.getElementById('interestBankName').value,
-                amount: amount,
-                interestRate: interestRate,
-                fdStartDate: fromDate || record.fdStartDate, 
+                amount,
+                interestRate,
+                fdStartDate: fromDate || record.fdStartDate,
                 fdMaturityDate: toDate || record.fdMaturityDate,
                 interest: calculatedInterestValue,
                 interestCalculationPeriod: period
@@ -508,14 +618,6 @@
             localStorage.setItem('savedInterest', JSON.stringify(savedInterestRecords));
             loadSavedInterest();
             document.getElementById('calculatedInterest').textContent = '0';
-        }
-
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
         }
 
         function loadSavedInterest() {
@@ -542,22 +644,20 @@
             });
         }
 
-        function clearCalculatedInterest() {
-            document.getElementById('calculatedInterest').textContent = '0';
-        }
-
         function editSavedInterest(index) {
             if (confirm("Are you sure you want to edit this saved interest record?")) {
                 const savedInterestRecords = getSavedInterest();
                 const record = savedInterestRecords[index];
 
                 document.getElementById('accountHolderSelect').value = record.accountHolderName;
+                loadAccountRecords();
                 document.getElementById('interestBankName').value = record.bankName;
                 document.getElementById('interestAmount').value = record.amount;
-                document.getElementById('customInterestAmount').value = record.amount; 
+                document.getElementById('customInterestAmount').value = record.amount;
                 document.getElementById('customInterestRate').value = record.interestRate;
                 document.getElementById('interestFromDate').value = record.fdStartDate;
                 document.getElementById('interestToDate').value = record.fdMaturityDate;
+                document.getElementById('interestCalculationPeriod').value = record.interestCalculationPeriod;
                 calculatedInterestValue = record.interest;
                 document.getElementById('calculatedInterest').textContent = calculatedInterestValue;
 
@@ -581,6 +681,51 @@
                 localStorage.removeItem('savedInterest');
                 loadSavedInterest();
             }
+        }
+
+        function exportSavedInterestToPDF() {
+            const savedInterestRecords = getSavedInterest();
+            if (!savedInterestRecords.length) {
+                alert("No saved interest records to export.");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("Saved Interest Records", 10, 10);
+            const tableData = savedInterestRecords.map(r => [
+                r.accountHolderName, r.bankName, r.amount, r.interestRate,
+                formatDate(r.fdStartDate), formatDate(r.fdMaturityDate), r.interestCalculationPeriod, r.interest
+            ]);
+            doc.autoTable({
+                head: [['Holder', 'Bank Name', 'Amount', 'Rate', 'Start Date', 'End Date', 'Period', 'Interest']],
+                body: tableData,
+                startY: 20
+            });
+            doc.save('Saved_Interest_Records.pdf');
+        }
+
+        function exportSavedInterestToExcel() {
+            const savedInterestRecords = getSavedInterest();
+            if (!savedInterestRecords.length) {
+                alert("No saved interest records to export.");
+                return;
+            }
+
+            const data = savedInterestRecords.map(r => ({
+                'Account Holder': r.accountHolderName,
+                'Bank Name': r.bankName,
+                'Amount': r.amount,
+                'Interest Rate': r.interestRate,
+                'Start Date': formatDate(r.fdStartDate),
+                'End Date': formatDate(r.fdMaturityDate),
+                'Period': r.interestCalculationPeriod,
+                'Interest': r.interest
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Saved Interest');
+            XLSX.writeFile(wb, 'Saved_Interest_Records.xlsx');
         }
     </script>
 </body>
