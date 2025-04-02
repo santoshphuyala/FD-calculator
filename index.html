@@ -383,7 +383,14 @@
             try {
                 const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
                 const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-                return decrypted ? JSON.parse(decrypted) : [];
+                
+                // Check if the decrypted string is valid UTF-8
+                if (!decrypted) {
+                    throw new Error('Decryption resulted in an empty string.');
+                }
+                
+                // Attempt to parse the decrypted string as JSON
+                return JSON.parse(decrypted);
             } catch (e) {
                 console.error('Decryption error:', e);
                 return [];
@@ -396,7 +403,4 @@
             const title = document.getElementById('passwordModalTitle');
             const currentHolderSpan = document.getElementById('currentAccountHolder');
             currentHolderSpan.textContent = accountHolder || 'New User';
-            title.textContent = action === 'login' ? 'Enter Password for' : action === 'set' ? 'Set Password for' : action === 'edit' ? 'Edit Password for' : 'Remove Password for';
-            modal.classList.remove('hidden');
-            mainContent.classList.add('hidden');
-            const submitBtn = document.getElementById('submitPassword
+            title.textContent = action === 'login' ? 'Enter Password for' : action === 'set' ?
