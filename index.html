@@ -6,26 +6,40 @@
     <title>Fixed Deposit Record</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            color: #333;
             line-height: 1.6;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h2, h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
+            font-size: 14px;
         }
         th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            border: 1px solid #e0e0e0;
+            padding: 10px;
             text-align: left;
         }
         th {
-            background-color: #f2f2f2;
+            background: #3498db;
+            color: #fff;
+            font-weight: 600;
         }
         .sortable {
             cursor: pointer;
@@ -38,40 +52,60 @@
         }
         button {
             margin: 5px;
-            padding: 5px 10px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            background: #2ecc71;
+            color: #fff;
             cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            font-size: 14px;
         }
-        #accountHolderSelect {
-            margin-bottom: 10px;
+        button:hover {
+            background: #27ae60;
+            transform: scale(1.05);
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        #accountHolderSelect, select, input[type="text"], input[type="number"], input[type="date"], input[type="file"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            width: 100%;
+            max-width: 300px;
+            box-sizing: border-box;
         }
         .interest-section, .saved-interest-section, .summary-section, .calendar-section {
             margin-top: 30px;
-            border-top: 1px solid #ddd;
-            padding-top: 20px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         .form-group {
-            margin: 10px 0;
+            margin: 15px 0;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
             align-items: center;
         }
         .form-group label {
-            margin-right: 10px;
-        }
-        input[type="number"], input[type="date"], input[type="file"], input[type="text"], select {
-            padding: 5px;
+            flex: 1 1 100%;
+            font-weight: 500;
+            color: #34495e;
         }
         .hidden {
             display: none;
         }
-        .renewal-green { color: green; }
-        .renewal-yellow { color: yellow; }
-        .renewal-red { color: red; animation: blinker 1s linear infinite; }
+        .renewal-green { color: #27ae60; }
+        .renewal-yellow { color: #f1c40f; }
+        .renewal-red { color: #e74c3c; animation: blinker 1s linear infinite; }
         @keyframes blinker { 50% { opacity: 0; } }
         .expired-circle::after { content: " 🔴"; }
-        .certificate-obtained { color: green; }
-        .certificate-not-obtained { color: red; }
+        .certificate-obtained { color: #27ae60; }
+        .certificate-not-obtained { color: #e74c3c; }
         .tooltip {
             position: relative;
             display: inline-block;
@@ -79,7 +113,7 @@
         .tooltip .tooltiptext {
             visibility: hidden;
             width: 120px;
-            background-color: #555;
+            background: #34495e;
             color: #fff;
             text-align: center;
             border-radius: 6px;
@@ -97,16 +131,33 @@
             opacity: 1;
         }
         .summary-section, .calendar-section {
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #f9f9f9;
+            background: #ecf0f1;
         }
         .calendar-list { list-style: none; padding: 0; }
-        .calendar-list li { margin: 5px 0; }
+        .calendar-list li { margin: 8px 0; color: #7f8c8d; }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+
+        /* Mobile Responsiveness */
         @media (max-width: 768px) {
-            .form-group { flex-direction: column; align-items: flex-start; }
-            table { font-size: 14px; }
+            .container { padding: 15px; }
+            .form-group { flex-direction: column; align-items: stretch; }
+            .form-group label { flex: 1 1 auto; }
+            input, select { max-width: 100%; }
+            button { width: 100%; max-width: 200px; margin: 5px auto; }
+            table { font-size: 12px; }
+            th, td { padding: 8px; }
+            .interest-section, .saved-interest-section, .summary-section, .calendar-section { padding: 15px; }
+        }
+        @media (max-width: 480px) {
+            h2 { font-size: 1.2em; }
+            button { font-size: 12px; padding: 6px 12px; }
+            table { font-size: 10px; }
+            th, td { padding: 6px; }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -166,7 +217,7 @@
                 </select>
             </label>
             <label class="tooltip">Interest Rate (% per annum): <input type="number" id="interestRate" min="0" step="0.1" value="5"><span class="tooltiptext">Annual interest rate</span></label>
-            <label class="tooltip">FD Start Date: <input type="date" id="fdStartDate"><span class="tooltiptext">FD start date</span></label>
+            <label class="tooltip">FD Start Date: <input type="date" id="fdStartDate" max=""><span class="tooltiptext">FD start date (up to today)</span></label>
             <label class="tooltip">FD Certificate: <span class="tooltiptext">Certificate status</span>
                 <select id="fdCertificate">
                     <option value="obtained">Obtained</option>
@@ -270,6 +321,9 @@
             <button id="exportSavedInterestToExcelBtn">Export to Excel</button>
         </div>
     </div>
+    <footer>
+        Software concept and designed by - Santosh Phuyal
+    </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -281,6 +335,10 @@
             document.querySelector('#interestFromDate').parentElement.classList.add('hidden');
             document.querySelector('#interestToDate').parentElement.classList.add('hidden');
             loadSavedInterest();
+
+            // Set max date for FD Start Date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fdStartDate').setAttribute('max', today);
 
             document.getElementById('addAccountHolderBtn').addEventListener('click', addAccountHolder);
             document.getElementById('saveRecordBtn').addEventListener('click', saveRecord);
@@ -307,15 +365,12 @@
                 dateFields.forEach(field => field.parentElement.classList.toggle('hidden', period !== 'custom'));
             });
 
-            // Interest preview on input change
             ['amount', 'duration', 'durationUnit', 'interestRate', 'fdStartDate'].forEach(id => {
                 document.getElementById(id).addEventListener('input', updateInterestPreview);
             });
 
-            // Search functionality
             document.getElementById('searchInput').addEventListener('input', filterRecords);
 
-            // Daily renewal update
             setInterval(() => {
                 const accountHolderName = document.getElementById('accountHolderSelect').value;
                 if (accountHolderName) loadAccountRecords();
@@ -404,49 +459,8 @@
                 fdRenewalDaysRemaining: calculateRenewalDaysRemaining(record.fdMaturityDate)
             }));
             saveAccountRecords(accountHolderName, records);
-
-            const tbody = document.getElementById('records');
-            tbody.innerHTML = '';
-            records.forEach((record, index) => {
-                const renewalDays = record.fdRenewalDaysRemaining;
-                let renewalClass = '';
-                if (renewalDays > 15) renewalClass = 'renewal-green';
-                else if (renewalDays >= 10 && renewalDays <= 14) renewalClass = 'renewal-yellow';
-                else if (renewalDays >= 1 && renewalDays <= 9) renewalClass = 'renewal-red';
-                else renewalClass = 'renewal-expired expired-circle';
-                const certificateClass = record.fdCertificate === 'obtained' ? 'certificate-obtained' : 'certificate-not-obtained';
-                const status = renewalDays > 0 ? 'Active' : 'Matured';
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><input type="checkbox" class="recordCheckbox" data-index="${index}"></td>
-                    <td class="${renewalClass}">${record.bankName}</td>
-                    <td class="${renewalClass}">${formatCurrency(record.amount)}</td>
-                    <td>${record.duration}</td>
-                    <td>${record.durationUnit}</td>
-                    <td>${record.interestRate}</td>
-                    <td>${formatDate(record.fdStartDate)}</td>
-                    <td>${formatDate(record.fdMaturityDate)}</td>
-                    <td class="${renewalClass}">${renewalDays}</td>
-                    <td>${formatCurrency(record.interest)}</td>
-                    <td class="${certificateClass}">${record.fdCertificate}</td>
-                    <td>${status}</td>
-                    <td>
-                        <button class="editBtn" data-account="${accountHolderName}" data-index="${index}">Edit</button>
-                        <button class="deleteBtn" data-account="${accountHolderName}" data-index="${index}">Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-
-            document.querySelectorAll('.editBtn').forEach(btn => btn.addEventListener('click', () => editRecord(btn.dataset.account, btn.dataset.index)));
-            document.querySelectorAll('.deleteBtn').forEach(btn => btn.addEventListener('click', () => deleteRecord(btn.dataset.account, btn.dataset.index)));
-            document.querySelectorAll('.sortable').forEach(header => header.addEventListener('click', () => sortTable(header.dataset.sort, accountHolderName)));
-
-            updateSummary(records);
-            updateMaturityCalendar(records);
+            displayRecords(records, accountHolderName);
             populateFDRecordSelect(records);
-            filterRecords(); // Apply any existing search filter
         }
 
         function calculateMaturityDate(startDate, duration, unit) {
@@ -475,15 +489,40 @@
                 days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
             } else {
                 if (unit === 'Days') days = parseInt(duration);
-                else if (unit === 'Months') days = Math.ceil((new Date().setMonth(new Date().getMonth() + parseInt(duration)) - new Date()) / (1000 * 60 * 60 * 24));
-                else if (unit === 'Years') days = Math.ceil((new Date().setFullYear(new Date().getFullYear() + parseInt(duration)) - new Date()) / (1000 * 60 * 60 * 24));
+                else if (unit === 'Months') days = Math.round(parseInt(duration) * 30.44);
+                else if (unit === 'Years') days = Math.round(parseInt(duration) * 365.25);
             }
             return (principal * rate * days) / 365.25;
         }
 
         function validateInputs(bankName, amount, duration, interestRate, fdStartDate, fdCertificate) {
-            if (!bankName || amount <= 0 || duration <= 0 || interestRate < 0 || !fdStartDate || !fdCertificate) {
-                alert("Please fill all fields with valid values (Amount > 0, Duration > 0, Interest Rate >= 0).");
+            const today = new Date().toISOString().split('T')[0];
+            if (!bankName) {
+                alert("Please select a bank name.");
+                return false;
+            }
+            if (amount <= 0 || isNaN(amount)) {
+                alert("Amount must be greater than 0.");
+                return false;
+            }
+            if (duration <= 0 || isNaN(duration)) {
+                alert("Duration must be greater than 0.");
+                return false;
+            }
+            if (interestRate < 0 || isNaN(interestRate)) {
+                alert("Interest rate cannot be negative.");
+                return false;
+            }
+            if (!fdStartDate) {
+                alert("Please select a start date.");
+                return false;
+            }
+            if (fdStartDate > today) {
+                alert("FD Start Date cannot be in the future.");
+                return false;
+            }
+            if (!fdCertificate) {
+                alert("Please select a certificate status.");
                 return false;
             }
             return true;
@@ -503,20 +542,30 @@
             const fdStartDate = document.getElementById('fdStartDate').value;
             const fdCertificate = document.getElementById('fdCertificate').value;
 
-            if (!validateInputs(bankName, amount, duration, interestRate, fdStartDate, fdCertificate)) return;
+            if (!validateInputs(bankName, amount, duration, interestRate, fdStartDate, fdCertificate)) {
+                return;
+            }
 
-            const fdMaturityDate = calculateMaturityDate(fdStartDate, duration, durationUnit);
-            const fdRenewalDaysRemaining = calculateRenewalDaysRemaining(fdMaturityDate);
-            const interest = calculateInterest(amount, interestRate, duration, durationUnit);
-            
-            const record = { bankName, amount, duration, durationUnit, interestRate, fdStartDate, fdMaturityDate, fdRenewalDaysRemaining, interest, fdCertificate };
-            let records = getAccountRecords(accountHolderName);
-            const editIndex = document.getElementById('editIndex').value;
-            if (editIndex !== '') records[editIndex] = record;
-            else records.push(record);
-            saveAccountRecords(accountHolderName, records);
-            loadAccountRecords();
-            clearInputs();
+            try {
+                const fdMaturityDate = calculateMaturityDate(fdStartDate, duration, durationUnit);
+                const fdRenewalDaysRemaining = calculateRenewalDaysRemaining(fdMaturityDate);
+                const interest = calculateInterest(amount, interestRate, duration, durationUnit);
+                
+                const record = { bankName, amount, duration, durationUnit, interestRate, fdStartDate, fdMaturityDate, fdRenewalDaysRemaining, interest, fdCertificate };
+                let records = getAccountRecords(accountHolderName);
+                const editIndex = document.getElementById('editIndex').value;
+                if (editIndex !== '') {
+                    records[editIndex] = record;
+                } else {
+                    records.push(record);
+                }
+                saveAccountRecords(accountHolderName, records);
+                loadAccountRecords();
+                clearInputs();
+            } catch (error) {
+                console.error('Error saving record:', error);
+                alert('Failed to save record. Check the console for details.');
+            }
         }
 
         function editRecord(accountHolderName, index) {
@@ -889,7 +938,6 @@
             }
         }
 
-        // New Functions for Enhancements
         function sortTable(field, accountHolderName) {
             let records = getAccountRecords(accountHolderName);
             const isNumeric = ['amount', 'duration', 'interestRate', 'fdRenewalDaysRemaining', 'interest'].includes(field);
@@ -951,6 +999,7 @@
             });
             document.querySelectorAll('.editBtn').forEach(btn => btn.addEventListener('click', () => editRecord(btn.dataset.account, btn.dataset.index)));
             document.querySelectorAll('.deleteBtn').forEach(btn => btn.addEventListener('click', () => deleteRecord(btn.dataset.account, btn.dataset.index)));
+            document.querySelectorAll('.sortable').forEach(header => header.addEventListener('click', () => sortTable(header.dataset.sort, accountHolderName)));
             updateSummary(records);
             updateMaturityCalendar(records);
         }
@@ -990,11 +1039,15 @@
             const durationUnit = document.getElementById('durationUnit').value;
             const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
             const fdStartDate = document.getElementById('fdStartDate').value;
-            if (amount > 0 && duration > 0 && interestRate >= 0 && fdStartDate) {
-                const interest = calculateInterest(amount, interestRate, duration, durationUnit);
-                document.getElementById('interestPreview').textContent = formatCurrency(interest);
-            } else {
-                document.getElementById('interestPreview').textContent = formatCurrency(0);
+            try {
+                if (amount > 0 && duration > 0 && interestRate >= 0 && fdStartDate) {
+                    const interest = calculateInterest(amount, interestRate, duration, durationUnit);
+                    document.getElementById('interestPreview').textContent = formatCurrency(interest);
+                } else {
+                    document.getElementById('interestPreview').textContent = formatCurrency(0);
+                }
+            } catch (error) {
+                document.getElementById('interestPreview').textContent = 'Invalid input';
             }
         }
 
