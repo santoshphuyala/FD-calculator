@@ -5,40 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fixed Deposit Record</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 20px; 
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
             line-height: 1.6;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin: 20px 0; 
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
         }
-        th, td { 
-            border: 1px solid #ddd; 
-            padding: 8px; 
-            text-align: left; 
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
         }
-        th { 
-            background-color: #f2f2f2; 
+        th {
+            background-color: #f2f2f2;
         }
-        button { 
-            margin: 5px; 
+        button {
+            margin: 5px;
             padding: 5px 10px;
             cursor: pointer;
         }
-        #accountHolderSelect { 
-            margin-bottom: 10px; 
+        #accountHolderSelect {
+            margin-bottom: 10px;
         }
-        .interest-section, .saved-interest-section { 
-            margin-top: 30px; 
-            border-top: 1px solid #ddd; 
-            padding-top: 20px; 
+        .interest-section, .saved-interest-section {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
         }
         .form-group {
             margin: 10px 0;
@@ -56,6 +56,22 @@
         .hidden {
             display: none;
         }
+        .renewal-green {
+            color: green;
+        }
+        .renewal-yellow {
+            color: yellow;
+        }
+        .renewal-red {
+            color: red;
+            animation: blinker 1s linear infinite;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+        .expired-circle::after {
+            content: " 🔴";
+        }
         @media (max-width: 768px) {
             .form-group {
                 flex-direction: column;
@@ -66,16 +82,14 @@
             }
         }
     </style>
-    <!-- Include jsPDF and jspdf-autotable for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <!-- Include XLSX for Excel import/export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="form-group">
-            <label>Account Holder: 
+            <label>Account Holder:
                 <select id="accountHolderSelect"></select>
                 <input type="text" id="newAccountHolder" placeholder="New Account Holder">
                 <button id="addAccountHolderBtn">Add Account Holder</button>
@@ -84,7 +98,7 @@
         <h2>Fixed Deposit Record - <span id="accountHolderNameDisplay"></span></h2>
 
         <div class="form-group">
-            <label>Bank Name: 
+            <label>Bank Name:
                 <select id="bankName">
                     <option value="Nabil Bank">Nabil Bank</option>
                     <option value="Nepal Investment Bank">Nepal Investment Bank</option>
@@ -109,7 +123,7 @@
                 </select>
             </label>
             <label>Amount: <input type="number" id="amount" min="0" step="0.01"></label>
-            <label>Duration: 
+            <label>Duration:
                 <input type="number" id="duration" min="1">
                 <select id="durationUnit">
                     <option value="Days">Days</option>
@@ -127,7 +141,7 @@
             <label>Import from Excel: <input type="file" id="importExcelFile" accept=".xlsx, .xls"></label>
             <button id="importExcelBtn">Import</button>
         </div>
-        
+
         <table>
             <thead>
                 <tr>
@@ -315,15 +329,32 @@
             tbody.innerHTML = '';
             records.forEach((record, index) => {
                 const row = document.createElement('tr');
+                const renewalDays = record.fdRenewalDaysRemaining;
+                let renewalClass = '';
+                if (renewalDays > 15) {
+                    renewalClass = 'renewal-green';
+                } else if (renewalDays >= 10 && renewalDays <= 14) {
+                    renewalClass = 'renewal-yellow';
+                } else if (renewalDays >= 1 && renewalDays <= 9) {
+                    renewalClass = 'renewal-red';
+                } else {
+                    renewalClass = 'renewal-expired expired-circle';
+                }
+
+                // Apply the class to the Bank Name and Amount cells
+                const bankNameCell = `<td class="${renewalClass}">${record.bankName}</td>`;
+                const amountCell = `<td class="${renewalClass}">${record.amount}</td>`;
+                const renewalCell = `<td class="${renewalClass}">${renewalDays}</td>`;
+
                 row.innerHTML = `
-                    <td>${record.bankName}</td>
-                    <td>${record.amount}</td>
+                    ${bankNameCell}
+                    ${amountCell}
                     <td>${record.duration}</td>
                     <td>${record.durationUnit}</td>
                     <td>${record.interestRate}</td>
                     <td>${formatDate(record.fdStartDate)}</td>
                     <td>${formatDate(record.fdMaturityDate)}</td>
-                    <td>${record.fdRenewalDaysRemaining}</td>
+                    ${renewalCell}
                     <td>${record.interest.toFixed(2)}</td>
                     <td>
                         <button class="editBtn" data-account="${accountHolderName}" data-index="${index}">Edit</button>
