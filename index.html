@@ -19,13 +19,14 @@
         }
         .saved-interest-table th, .saved-interest-table td {
             border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
+            padding: 8px; text-align: left;
         }
         .saved-interest-table th {
             background-color: #f2f2f2;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <label>Account Holder Name: 
@@ -103,8 +104,6 @@
         <label>Amount: <input type="number" id="interestAmount" readonly></label>
         <label>Interest Calculation Period:
             <select id="interestCalculationPeriod">
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
                 <option value="whole">Whole FD Period</option>
                 <option value="custom">Custom Date Range</option>
                 <option value="fullCustom">Full Custom Input</option>
@@ -124,10 +123,6 @@
         <label>To Date: <input type="date" id="interestToDate"></label>
         <button onclick="calculateAndDisplayInterest()">Calculate Interest</button>
         <p>Calculated Interest: <span id="calculatedInterest">0</span></p>
-        <div id="interestActions" style="display: none;">
-            <button onclick="saveCalculatedInterest()">Save Interest</button>
-            <button onclick="clearCalculatedInterest()">Skip Saving Interest</button>
-        </div>
     </div>
 
     <div class="saved-interest-section">
@@ -141,6 +136,7 @@
                     <th>Interest Rate</th>
                     <th>Start Date</th>
                     <th>End Date</th>
+                    <th>Interest Calculation Period</th>
                     <th>Interest</th>
                     <th>Actions</th>
                 </tr>
@@ -224,6 +220,14 @@
             }
         }
 
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function loadAccountRecords() {
             const accountHolderName = document.getElementById('accountHolderSelect').value;
             document.getElementById('accountHolderNameDisplay').textContent = accountHolderName;
@@ -238,8 +242,8 @@
                     <td>${record.duration}</td>
                     <td>${record.durationUnit}</td>
                     <td>${record.interestRate}</td>
-                    <td>${record.fdStartDate}</td>
-                    <td>${record.fdMaturityDate}</td>
+                    <td>${formatDate(record.fdStartDate)}</td>
+                    <td>${formatDate(record.fdMaturityDate)}</td>
                     <td>${record.fdRenewalDaysRemaining}</td>
                     <td>${record.interest.toFixed(2)}</td>
                     <td>
@@ -262,7 +266,7 @@
             } else if (unit === 'Years') {
                 date.setFullYear(date.getFullYear() + durationValue);
             }
-            return date.toLocaleDateString();
+            return date.toISOString().split('T')[0];
         }
 
         function calculateRenewalDaysRemaining(maturityDate) {
@@ -436,12 +440,10 @@
 
             if (!records || records.length === 0) {
                 document.getElementById('calculatedInterest').textContent = "No records found for this account holder.";
-                document.getElementById('interestActions').style.display = 'none';
                 return;
             }
             if (records && !records[fdRecordIndex]) {
                 document.getElementById('calculatedInterest').textContent = "No FD Record Selected.";
-                document.getElementById('interestActions').style.display = 'none';
                 return;
             }
             const record = records[fdRecordIndex];
@@ -462,23 +464,17 @@
 
                 if (isNaN(amount) || isNaN(interestRate) || isNaN(duration)) {
                     document.getElementById('calculatedInterest').textContent = "Please enter valid values for Amount, Interest Rate, and Duration.";
-                    document.getElementById('interestActions').style.display = 'none';
                     return;
                 }
             }
 
             let interest = 0;
 
-             if (period === 'monthly') {
-                interest = calculateInterest(amount, interestRate, 1, 'Months');
-            } else if (period === 'quarterly') {
-                interest = calculateInterest(amount, interestRate, 3, 'Months');
-            } else if (period === 'whole') {
+             if (period === 'whole') {
                 interest = calculateInterest(amount, interestRate, duration, unit);
             } else if (period === 'custom') {
                 if (!fromDate || !toDate) {
                     document.getElementById('calculatedInterest').textContent = "Please select both From and To dates.";
-                    document.getElementById('interestActions').style.display = 'none';
                     return;
                 }
                 interest = calculateInterest(amount, interestRate, duration, unit, fromDate, toDate);
@@ -488,7 +484,6 @@
 
             calculatedInterestValue = interest.toFixed(2);
             document.getElementById('calculatedInterest').textContent = calculatedInterestValue;
-            document.getElementById('interestActions').style.display = 'block';
 
             calculatedInterestRecord = {
                 accountHolderName: accountHolderName,
@@ -497,8 +492,10 @@
                 interestRate: interestRate,
                 fdStartDate: fromDate || record.fdStartDate, 
                 fdMaturityDate: toDate || record.fdMaturityDate,
-                interest: calculatedInterestValue
+                interest: calculatedInterestValue,
+                interestCalculationPeriod: period
             };
+            saveCalculatedInterest();
         }
 
         function getSavedInterest() {
@@ -511,7 +508,14 @@
             localStorage.setItem('savedInterest', JSON.stringify(savedInterestRecords));
             loadSavedInterest();
             document.getElementById('calculatedInterest').textContent = '0';
-            document.getElementById('interestActions').style.display = 'none';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
 
         function loadSavedInterest() {
@@ -525,8 +529,9 @@
                     <td>${record.bankName}</td>
                     <td>${record.amount}</td>
                     <td>${record.interestRate}</td>
-                    <td>${record.fdStartDate}</td>
-                    <td>${record.fdMaturityDate}</td>
+                    <td>${formatDate(record.fdStartDate)}</td>
+                    <td>${formatDate(record.fdMaturityDate)}</td>
+                    <td>${record.interestCalculationPeriod}</td>
                     <td>${record.interest}</td>
                     <td>
                         <button onclick="editSavedInterest(${index})">Edit</button>
@@ -539,7 +544,6 @@
 
         function clearCalculatedInterest() {
             document.getElementById('calculatedInterest').textContent = '0';
-            document.getElementById('interestActions').style.display = 'none';
         }
 
         function editSavedInterest(index) {
@@ -556,7 +560,6 @@
                 document.getElementById('interestToDate').value = record.fdMaturityDate;
                 calculatedInterestValue = record.interest;
                 document.getElementById('calculatedInterest').textContent = calculatedInterestValue;
-                document.getElementById('interestActions').style.display = 'block';
 
                 savedInterestRecords.splice(index, 1);
                 localStorage.setItem('savedInterest', JSON.stringify(savedInterestRecords));
