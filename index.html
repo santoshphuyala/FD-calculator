@@ -68,7 +68,7 @@
         button:active {
             transform: scale(0.95);
         }
-        #accountHolderSelect, select, input[type="text"], input[type="number"], input[type="date"], input[type="file"], input[type="password"] {
+        #accountHolderSelect, select, input[type="text"], input[type="number"], input[type="date"], input[type="file"] {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 5px;
@@ -141,25 +141,6 @@
             color: #7f8c8d;
             font-size: 12px;
         }
-        #passwordModal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        #passwordModal div {
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
         #chartContainer {
             margin-top: 20px;
             max-width: 600px;
@@ -167,12 +148,6 @@
             margin-right: auto;
         }
         datalist { width: 100%; max-width: 300px; }
-        .account-holder-controls button {
-            background: #3498db;
-            margin: 0 5px;
-        }
-        .account-holder-controls button:hover { background: #2980b9; }
-
         @media (max-width: 768px) {
             .container { padding: 15px; }
             .form-group { flex-direction: column; align-items: stretch; }
@@ -193,29 +168,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
-    <div id="passwordModal" class="hidden">
-        <div>
-            <h3 id="passwordModalTitle">Set or Enter Password for <span id="currentAccountHolder"></span></h3>
-            <input type="password" id="passwordInput" placeholder="Enter Password">
-            <button id="submitPassword">Submit</button>
-            <p id="passwordError" style="color: red;"></p>
-        </div>
-    </div>
     <div class="container" id="mainContent">
         <div class="form-group">
             <label>Account Holder:
                 <select id="accountHolderSelect"></select>
                 <input type="text" id="newAccountHolder" placeholder="New Account Holder">
                 <button id="addAccountHolderBtn">Add Account Holder</button>
-                <div class="account-holder-controls">
-                    <button id="setPasswordBtn">Set Password</button>
-                    <button id="editPasswordBtn">Edit Password</button>
-                    <button id="removePasswordBtn">Remove Password</button>
-                </div>
             </label>
         </div>
         <h2>Fixed Deposit Record - <span id="accountHolderNameDisplay"></span></h2>
@@ -358,10 +320,10 @@
     </footer>
 
     <script>
-        const ENCRYPTION_KEY = 'FDRecordSecretKey'; // Static for simplicity; should be dynamic in production
+        const ENCRYPTION_KEY = 'FDRecordSecretKey';
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('mainContent').classList.remove('hidden'); // Show interface immediately
+            document.getElementById('mainContent').classList.remove('hidden');
             initializeApp();
         });
 
@@ -381,72 +343,6 @@
             }
         }
 
-        function showPasswordPrompt(accountHolder, action) {
-            const modal = document.getElementById('passwordModal');
-            const mainContent = document.getElementById('mainContent');
-            const title = document.getElementById('passwordModalTitle');
-            const currentHolderSpan = document.getElementById('currentAccountHolder');
-            currentHolderSpan.textContent = accountHolder || 'New User';
-            title.textContent = action === 'set' ? 'Set Password for' : action === 'edit' ? 'Edit Password for' : 'Remove Password for';
-            modal.classList.remove('hidden');
-            mainContent.classList.add('hidden');
-            const submitBtn = document.getElementById('submitPassword');
-            submitBtn.onclick = () => handlePassword(accountHolder, action);
-            document.getElementById('passwordInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') handlePassword(accountHolder, action);
-            });
-        }
-
-        function handlePassword(accountHolder, action) {
-            const input = document.getElementById('passwordInput').value;
-            const error = document.getElementById('passwordError');
-            const modal = document.getElementById('passwordModal');
-            const mainContent = document.getElementById('mainContent');
-            let passwords = JSON.parse(localStorage.getItem('accountPasswords') || '{}');
-
-            if (action === 'set') {
-                if (input.length < 4) {
-                    error.textContent = 'Password must be at least 4 characters.';
-                    return;
-                }
-                passwords[accountHolder] = input;
-                localStorage.setItem('accountPasswords', JSON.stringify(passwords));
-                modal.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-                alert('Password set successfully!');
-            } else if (action === 'edit') {
-                if (!passwords[accountHolder]) {
-                    error.textContent = 'No password set to edit.';
-                    return;
-                }
-                if (input.length < 4) {
-                    error.textContent = 'Password must be at least 4 characters.';
-                    return;
-                }
-                passwords[accountHolder] = input;
-                localStorage.setItem('accountPasswords', JSON.stringify(passwords));
-                modal.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-                alert('Password updated successfully!');
-            } else if (action === 'remove') {
-                if (!passwords[accountHolder]) {
-                    error.textContent = 'No password set to remove.';
-                    return;
-                }
-                if (input !== passwords[accountHolder]) {
-                    error.textContent = 'Incorrect password. Try again.';
-                    return;
-                }
-                delete passwords[accountHolder];
-                localStorage.setItem('accountPasswords', JSON.stringify(passwords));
-                modal.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-                alert('Password removed successfully!');
-            }
-            document.getElementById('passwordInput').value = '';
-            error.textContent = '';
-        }
-
         function initializeApp() {
             loadAccountHolders();
             document.getElementById('customInterestAmountLabel').classList.add('hidden');
@@ -461,21 +357,6 @@
             document.getElementById('fdStartDate').setAttribute('max', today);
 
             document.getElementById('addAccountHolderBtn').addEventListener('click', addAccountHolder);
-            document.getElementById('setPasswordBtn').addEventListener('click', () => {
-                const accountHolder = document.getElementById('accountHolderSelect').value;
-                if (!accountHolder) alert('Please select an account holder first.');
-                else showPasswordPrompt(accountHolder, 'set');
-            });
-            document.getElementById('editPasswordBtn').addEventListener('click', () => {
-                const accountHolder = document.getElementById('accountHolderSelect').value;
-                if (!accountHolder) alert('Please select an account holder first.');
-                else showPasswordPrompt(accountHolder, 'edit');
-            });
-            document.getElementById('removePasswordBtn').addEventListener('click', () => {
-                const accountHolder = document.getElementById('accountHolderSelect').value;
-                if (!accountHolder) alert('Please select an account holder first.');
-                else showPasswordPrompt(accountHolder, 'remove');
-            });
             document.getElementById('saveRecordBtn').addEventListener('click', saveRecord);
             document.getElementById('clearAllRecordsBtn').addEventListener('click', clearAllRecords);
             document.getElementById('exportToPDFBtn').addEventListener('click', exportToPDF);
@@ -1241,8 +1122,7 @@
             const allData = {
                 accountHolders: getAccountHolders(),
                 accountRecords: {},
-                savedInterest: getSavedInterest(),
-                accountPasswords: JSON.parse(localStorage.getItem('accountPasswords') || '{}')
+                savedInterest: getSavedInterest()
             };
             getAccountHolders().forEach(holder => {
                 allData.accountRecords[holder] = getAccountRecords(holder);
@@ -1273,7 +1153,6 @@
                             saveAccountRecords(holder, records);
                         }
                         localStorage.setItem('savedInterest', encryptData(data.savedInterest));
-                        localStorage.setItem('accountPasswords', JSON.stringify(data.accountPasswords));
                         loadAccountHolders();
                         alert('Data restored successfully!');
                     } catch (error) {
