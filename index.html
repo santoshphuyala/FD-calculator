@@ -68,7 +68,7 @@
         button:active {
             transform: scale(0.95);
         }
-        #accountHolderSelect, select, input[type="text"], input[type="number"], input[type="date"], input[type="file"] {
+        #accountHolderSelect, select, input[type="text"], input[type="number"], input[type="date"], input[type="file"], input[type="password"] {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 5px;
@@ -166,6 +166,12 @@
             margin-left: auto;
             margin-right: auto;
         }
+        datalist { width: 100%; max-width: 300px; }
+        .account-holder-controls button {
+            background: #3498db;
+            margin: 0 5px;
+        }
+        .account-holder-controls button:hover { background: #2980b9; }
 
         @media (max-width: 768px) {
             .container { padding: 15px; }
@@ -188,57 +194,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
     <div id="passwordModal" class="hidden">
         <div>
-            <h3>Set or Enter Password</h3>
+            <h3 id="passwordModalTitle">Set or Enter Password for <span id="currentAccountHolder"></span></h3>
             <input type="password" id="passwordInput" placeholder="Enter Password">
             <button id="submitPassword">Submit</button>
             <p id="passwordError" style="color: red;"></p>
         </div>
     </div>
-    <div class="container hidden" id="mainContent">
+    <div class="container" id="mainContent">
         <div class="form-group">
             <label>Account Holder:
                 <select id="accountHolderSelect"></select>
                 <input type="text" id="newAccountHolder" placeholder="New Account Holder">
                 <button id="addAccountHolderBtn">Add Account Holder</button>
+                <div class="account-holder-controls">
+                    <button id="setPasswordBtn">Set Password</button>
+                    <button id="editPasswordBtn">Edit Password</button>
+                    <button id="removePasswordBtn">Remove Password</button>
+                </div>
             </label>
         </div>
         <h2>Fixed Deposit Record - <span id="accountHolderNameDisplay"></span></h2>
 
         <div class="form-group">
             <label>Search: <input type="text" id="searchInput" placeholder="Search by Bank Name or Amount"></label>
-            <button id="backupDataBtn">Backup Data</button>
+            <button id="backupDataBtn">Backup All Data</button>
+            <button id="restoreDataBtn">Restore Data</button>
             <button id="bulkDeleteBtn">Delete Selected</button>
             <button id="bulkExportBtn">Export Selected</button>
         </div>
 
         <div class="form-group">
-            <label class="tooltip">Bank Name: <span class="tooltiptext">Select the bank for FD</span>
-                <select id="bankName">
-                    <option value="Nabil Bank">Nabil Bank</option>
-                    <option value="Nepal Investment Bank">Nepal Investment Bank</option>
-                    <option value="Standard Chartered Bank">Standard Chartered Bank</option>
-                    <option value="NIC Asia Bank">NIC Asia Bank</option>
-                    <option value="Himalayan Bank">Himalayan Bank</option>
-                    <option value="Global IME Bank">Global IME Bank</option>
-                    <option value="Siddhartha Bank">Siddhartha Bank</option>
-                    <option value="Prime Commercial Bank">Prime Commercial Bank</option>
-                    <option value="Everest Bank">Everest Bank</option>
-                    <option value="Citizens Bank">Citizens Bank</option>
-                    <option value="Sanima Bank">Sanima Bank</option>
-                    <option value="Kumari Bank">Kumari Bank</option>
-                    <option value="Laxmi Bank">Laxmi Bank</option>
-                    <option value="Machhapuchchhre Bank">Machhapuchchhre Bank</option>
-                    <option value="Mega Bank">Mega Bank</option>
-                    <option value="Sunrise Bank">Sunrise Bank</option>
-                    <option value="NMB Bank">NMB Bank</option>
-                    <option value="Prabhu Bank">Prabhu Bank</option>
-                    <option value="Civil Bank">Civil Bank</option>
-                    <option value="Century Commercial Bank">Century Commercial Bank</option>
-                </select>
+            <label class="tooltip">Bank Name: <span class="tooltiptext">Select or type bank name</span>
+                <input type="text" id="bankName" list="bankSuggestions">
+                <datalist id="bankSuggestions"></datalist>
             </label>
             <label class="tooltip">Amount: <input type="number" id="amount" min="0" step="0.01"><span class="tooltiptext">Enter FD amount</span></label>
             <label class="tooltip">Duration: <span class="tooltiptext">Set FD duration</span>
@@ -354,8 +347,9 @@
             <p>Matured FDs: <span id="maturedFDs">0</span></p>
             <div id="bankBreakdown"></div>
             <button id="generatePieChartBtn">Generate Pie Chart</button>
+            <button id="generateBarChartBtn">Generate Bar Chart</button>
             <div id="chartContainer" class="hidden">
-                <canvas id="pieChart"></canvas>
+                <canvas id="portfolioChart"></canvas>
             </div>
         </div>
     </div>
@@ -364,5 +358,1003 @@
     </footer>
 
     <script>
-        let inactivityTimer;
-        const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
+        const ENCRYPTION_KEY = 'FDRecordSecretKey'; // Static for simplicity; should be dynamic in production
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('mainContent').classList.remove('hidden'); // Show interface immediately
+            initializeApp();
+        });
+
+        function encryptData(data) {
+            return CryptoJS.AES.encrypt(JSON.stringify(data), ENCRYPTION_KEY).toString();
+        }
+
+        function decryptData(encryptedData) {
+            if (!encryptedData) return [];
+            try {
+                const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
+                const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+                return decrypted ? JSON.parse(decrypted) : [];
+            } catch (e) {
+                console.error('Decryption error:', e);
+                return [];
+            }
+        }
+
+        function showPasswordPrompt(accountHolder, action) {
+            const modal = document.getElementById('passwordModal');
+            const mainContent = document.getElementById('mainContent');
+            const title = document.getElementById('passwordModalTitle');
+            const currentHolderSpan = document.getElementById('currentAccountHolder');
+            currentHolderSpan.textContent = accountHolder || 'New User';
+            title.textContent = action === 'set' ? 'Set Password for' : action === 'edit' ? 'Edit Password for' : 'Remove Password for';
+            modal.classList.remove('hidden');
+            mainContent.classList.add('hidden');
+            const submitBtn = document.getElementById('submitPassword');
+            submitBtn.onclick = () => handlePassword(accountHolder, action);
+            document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handlePassword(accountHolder, action);
+            });
+        }
+
+        function handlePassword(accountHolder, action) {
+            const input = document.getElementById('passwordInput').value;
+            const error = document.getElementById('passwordError');
+            const modal = document.getElementById('passwordModal');
+            const mainContent = document.getElementById('mainContent');
+            let passwords = JSON.parse(localStorage.getItem('accountPasswords') || '{}');
+
+            if (action === 'set') {
+                if (input.length < 4) {
+                    error.textContent = 'Password must be at least 4 characters.';
+                    return;
+                }
+                passwords[accountHolder] = input;
+                localStorage.setItem('accountPasswords', JSON.stringify(passwords));
+                modal.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                alert('Password set successfully!');
+            } else if (action === 'edit') {
+                if (!passwords[accountHolder]) {
+                    error.textContent = 'No password set to edit.';
+                    return;
+                }
+                if (input.length < 4) {
+                    error.textContent = 'Password must be at least 4 characters.';
+                    return;
+                }
+                passwords[accountHolder] = input;
+                localStorage.setItem('accountPasswords', JSON.stringify(passwords));
+                modal.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                alert('Password updated successfully!');
+            } else if (action === 'remove') {
+                if (!passwords[accountHolder]) {
+                    error.textContent = 'No password set to remove.';
+                    return;
+                }
+                if (input !== passwords[accountHolder]) {
+                    error.textContent = 'Incorrect password. Try again.';
+                    return;
+                }
+                delete passwords[accountHolder];
+                localStorage.setItem('accountPasswords', JSON.stringify(passwords));
+                modal.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                alert('Password removed successfully!');
+            }
+            document.getElementById('passwordInput').value = '';
+            error.textContent = '';
+        }
+
+        function initializeApp() {
+            loadAccountHolders();
+            document.getElementById('customInterestAmountLabel').classList.add('hidden');
+            document.getElementById('customInterestRateLabel').classList.add('hidden');
+            document.getElementById('customInterestDurationLabel').classList.add('hidden');
+            document.getElementById('customInterestDurationUnitLabel').classList.add('hidden');
+            document.querySelector('#interestFromDate').parentElement.classList.add('hidden');
+            document.querySelector('#interestToDate').parentElement.classList.add('hidden');
+            loadSavedInterest();
+
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fdStartDate').setAttribute('max', today);
+
+            document.getElementById('addAccountHolderBtn').addEventListener('click', addAccountHolder);
+            document.getElementById('setPasswordBtn').addEventListener('click', () => {
+                const accountHolder = document.getElementById('accountHolderSelect').value;
+                if (!accountHolder) alert('Please select an account holder first.');
+                else showPasswordPrompt(accountHolder, 'set');
+            });
+            document.getElementById('editPasswordBtn').addEventListener('click', () => {
+                const accountHolder = document.getElementById('accountHolderSelect').value;
+                if (!accountHolder) alert('Please select an account holder first.');
+                else showPasswordPrompt(accountHolder, 'edit');
+            });
+            document.getElementById('removePasswordBtn').addEventListener('click', () => {
+                const accountHolder = document.getElementById('accountHolderSelect').value;
+                if (!accountHolder) alert('Please select an account holder first.');
+                else showPasswordPrompt(accountHolder, 'remove');
+            });
+            document.getElementById('saveRecordBtn').addEventListener('click', saveRecord);
+            document.getElementById('clearAllRecordsBtn').addEventListener('click', clearAllRecords);
+            document.getElementById('exportToPDFBtn').addEventListener('click', exportToPDF);
+            document.getElementById('exportToExcelBtn').addEventListener('click', exportToExcel);
+            document.getElementById('importExcelBtn').addEventListener('click', importFromExcel);
+            document.getElementById('calculateInterestBtn').addEventListener('click', calculateAndDisplayInterest);
+            document.getElementById('clearAllSavedInterestBtn').addEventListener('click', clearAllSavedInterest);
+            document.getElementById('exportSavedInterestToPDFBtn').addEventListener('click', exportSavedInterestToPDF);
+            document.getElementById('exportSavedInterestToExcelBtn').addEventListener('click', exportSavedInterestToExcel);
+            document.getElementById('backupDataBtn').addEventListener('click', backupAllData);
+            document.getElementById('restoreDataBtn').addEventListener('click', restoreData);
+            document.getElementById('bulkDeleteBtn').addEventListener('click', bulkDelete);
+            document.getElementById('bulkExportBtn').addEventListener('click', bulkExport);
+            document.getElementById('selectAll').addEventListener('change', toggleSelectAll);
+            document.getElementById('generatePieChartBtn').addEventListener('click', () => generateChart('pie'));
+            document.getElementById('generateBarChartBtn').addEventListener('click', () => generateChart('bar'));
+
+            document.getElementById('accountHolderSelect').addEventListener('change', loadAccountRecords);
+            document.getElementById('fdRecordSelect').addEventListener('change', updateInterestFields);
+            document.getElementById('interestCalculationPeriod').addEventListener('change', function() {
+                const period = this.value;
+                const customFields = ['customInterestAmountLabel', 'customInterestRateLabel', 'customInterestDurationLabel', 'customInterestDurationUnitLabel'];
+                const dateFields = document.querySelectorAll('#interestFromDate, #interestToDate');
+                customFields.forEach(id => document.getElementById(id).classList.toggle('hidden', period !== 'fullCustom'));
+                dateFields.forEach(field => field.parentElement.classList.toggle('hidden', period !== 'custom'));
+            });
+
+            ['amount', 'duration', 'durationUnit', 'interestRate', 'fdStartDate'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateInterestPreview);
+            });
+
+            document.getElementById('searchInput').addEventListener('input', filterRecords);
+            document.getElementById('bankName').addEventListener('input', updateBankSuggestions);
+
+            setInterval(() => {
+                const accountHolderName = document.getElementById('accountHolderSelect').value;
+                if (accountHolderName) loadAccountRecords();
+            }, 86400000); // 24 hours
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-NP', { style: 'currency', currency: 'NPR' }).format(amount);
+        }
+
+        function getAccountHolders() {
+            const encrypted = localStorage.getItem('accountHolders');
+            return decryptData(encrypted);
+        }
+
+        function saveAccountHolders(accountHolders) {
+            localStorage.setItem('accountHolders', encryptData(accountHolders));
+        }
+
+        function loadAccountHolders() {
+            const accountHolderSelect = document.getElementById('accountHolderSelect');
+            accountHolderSelect.innerHTML = '';
+            const accountHolders = getAccountHolders();
+            accountHolders.forEach(holder => {
+                const option = document.createElement('option');
+                option.value = holder;
+                option.textContent = holder;
+                accountHolderSelect.appendChild(option);
+            });
+            if (accountHolders.length > 0) {
+                accountHolderSelect.value = accountHolders[0];
+                loadAccountRecords();
+            } else {
+                document.getElementById('accountHolderNameDisplay').textContent = "No Account Holder Selected";
+                document.getElementById('records').innerHTML = '';
+                document.getElementById('fdRecordSelect').innerHTML = '';
+            }
+            updateBankSuggestions();
+        }
+
+        function addAccountHolder() {
+            const newAccountHolderInput = document.getElementById('newAccountHolder');
+            const newAccountHolderName = newAccountHolderInput.value.trim();
+            if (!newAccountHolderName) {
+                alert("Please enter a valid account holder name.");
+                return;
+            }
+            const accountHolders = getAccountHolders();
+            if (!accountHolders.includes(newAccountHolderName)) {
+                accountHolders.push(newAccountHolderName);
+                saveAccountHolders(accountHolders);
+                loadAccountHolders();
+                document.getElementById('accountHolderSelect').value = newAccountHolderName;
+            }
+            newAccountHolderInput.value = '';
+        }
+
+        function getAccountRecords(accountHolderName) {
+            const encrypted = localStorage.getItem(`records_${accountHolderName}`);
+            return decryptData(encrypted);
+        }
+
+        function saveAccountRecords(accountHolderName, records) {
+            localStorage.setItem(`records_${accountHolderName}`, encryptData(records));
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toISOString().split('T')[0];
+        }
+
+        function loadAccountRecords() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            document.getElementById('accountHolderNameDisplay').textContent = accountHolderName || "No Account Holder Selected";
+            let records = getAccountRecords(accountHolderName);
+            records = records.map(record => ({
+                ...record,
+                fdRenewalDaysRemaining: calculateRenewalDaysRemaining(record.fdMaturityDate)
+            }));
+            saveAccountRecords(accountHolderName, records);
+            displayRecords(records, accountHolderName);
+            populateFDRecordSelect(records);
+        }
+
+        function calculateMaturityDate(startDate, duration, unit) {
+            const date = new Date(startDate);
+            const durationValue = parseInt(duration);
+            if (unit === 'Days') date.setDate(date.getDate() + durationValue);
+            else if (unit === 'Months') date.setMonth(date.getMonth() + durationValue);
+            else if (unit === 'Years') date.setFullYear(date.getFullYear() + durationValue);
+            return date.toISOString().split('T')[0];
+        }
+
+        function calculateRenewalDaysRemaining(maturityDate) {
+            const today = new Date();
+            const maturity = new Date(maturityDate);
+            const diffTime = maturity - today;
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function calculateInterest(amount, interestRate, duration, unit, fromDate, toDate) {
+            const principal = parseFloat(amount);
+            const rate = parseFloat(interestRate) / 100;
+            let days;
+            if (fromDate && toDate) {
+                const start = new Date(fromDate);
+                const end = new Date(toDate);
+                days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            } else {
+                if (unit === 'Days') days = parseInt(duration);
+                else if (unit === 'Months') days = Math.round(parseInt(duration) * 30.44);
+                else if (unit === 'Years') days = Math.round(parseInt(duration) * 365.25);
+            }
+            return (principal * rate * days) / 365.25;
+        }
+
+        function validateInputs(bankName, amount, duration, interestRate, fdStartDate, fdCertificate) {
+            const today = new Date().toISOString().split('T')[0];
+            if (!bankName) {
+                alert("Please enter a bank name.");
+                return false;
+            }
+            if (amount <= 0 || isNaN(amount)) {
+                alert("Amount must be greater than 0.");
+                return false;
+            }
+            if (duration <= 0 || isNaN(duration)) {
+                alert("Duration must be greater than 0.");
+                return false;
+            }
+            if (interestRate < 0 || isNaN(interestRate)) {
+                alert("Interest rate cannot be negative.");
+                return false;
+            }
+            if (!fdStartDate) {
+                alert("Please select a start date.");
+                return false;
+            }
+            if (fdStartDate > today) {
+                alert("FD Start Date cannot be in the future.");
+                return false;
+            }
+            if (!fdCertificate) {
+                alert("Please select a certificate status.");
+                return false;
+            }
+            return true;
+        }
+
+        function saveRecord() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            if (!accountHolderName) {
+                alert("Please select or add an account holder first.");
+                return;
+            }
+            const bankName = document.getElementById('bankName').value;
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const duration = parseInt(document.getElementById('duration').value) || 0;
+            const durationUnit = document.getElementById('durationUnit').value;
+            const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
+            const fdStartDate = document.getElementById('fdStartDate').value;
+            const fdCertificate = document.getElementById('fdCertificate').value;
+
+            if (!validateInputs(bankName, amount, duration, interestRate, fdStartDate, fdCertificate)) {
+                return;
+            }
+
+            try {
+                const fdMaturityDate = calculateMaturityDate(fdStartDate, duration, durationUnit);
+                const fdRenewalDaysRemaining = calculateRenewalDaysRemaining(fdMaturityDate);
+                const interest = calculateInterest(amount, interestRate, duration, durationUnit);
+                
+                const record = { bankName, amount, duration, durationUnit, interestRate, fdStartDate, fdMaturityDate, fdRenewalDaysRemaining, interest, fdCertificate };
+                let records = getAccountRecords(accountHolderName);
+                const editIndex = document.getElementById('editIndex').value;
+                if (editIndex !== '') {
+                    records[editIndex] = record;
+                } else {
+                    records.push(record);
+                }
+                saveAccountRecords(accountHolderName, records);
+                loadAccountRecords();
+                clearInputs();
+            } catch (error) {
+                console.error('Error saving record:', error);
+                alert('Failed to save record. Check the console for details.');
+            }
+        }
+
+        function editRecord(accountHolderName, index) {
+            if (confirm("Are you sure you want to edit this record?")) {
+                const records = getAccountRecords(accountHolderName);
+                const record = records[index];
+                document.getElementById('bankName').value = record.bankName;
+                document.getElementById('amount').value = record.amount;
+                document.getElementById('duration').value = record.duration;
+                document.getElementById('durationUnit').value = record.durationUnit;
+                document.getElementById('interestRate').value = record.interestRate;
+                document.getElementById('fdStartDate').value = record.fdStartDate;
+                document.getElementById('fdCertificate').value = record.fdCertificate;
+                document.getElementById('editIndex').value = index;
+            }
+        }
+
+        function deleteRecord(accountHolderName, index) {
+            if (confirm("Are you sure you want to delete this record?")) {
+                let records = getAccountRecords(accountHolderName);
+                records.splice(index, 1);
+                saveAccountRecords(accountHolderName, records);
+                loadAccountRecords();
+            }
+        }
+
+        function clearInputs() {
+            document.getElementById('bankName').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('duration').value = '';
+            document.getElementById('durationUnit').value = 'Days';
+            document.getElementById('interestRate').value = '5';
+            document.getElementById('fdStartDate').value = '';
+            document.getElementById('fdCertificate').value = 'obtained';
+            document.getElementById('editIndex').value = '';
+            updateInterestPreview();
+        }
+
+        function clearAllRecords() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            if (!accountHolderName) {
+                alert("No account holder selected.");
+                return;
+            }
+            if (confirm("Are you sure you want to clear all records for this account holder?")) {
+                localStorage.removeItem(`records_${accountHolderName}`);
+                loadAccountRecords();
+            }
+        }
+
+        function exportToPDF() {
+            try {
+                const accountHolderName = document.getElementById('accountHolderSelect').value;
+                const records = getAccountRecords(accountHolderName);
+                if (!records.length) {
+                    alert("No records to export.");
+                    return;
+                }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.text(`Fixed Deposit Records - ${accountHolderName}`, 10, 10);
+                const tableData = records.map(r => [
+                    r.bankName, formatCurrency(r.amount), r.duration.toString(), r.durationUnit, r.interestRate.toString(),
+                    formatDate(r.fdStartDate), formatDate(r.fdMaturityDate), r.fdRenewalDaysRemaining.toString(), formatCurrency(r.interest), r.fdCertificate, r.fdRenewalDaysRemaining > 0 ? 'Active' : 'Matured'
+                ]);
+                doc.autoTable({
+                    head: [['Bank Name', 'Amount', 'Duration', 'Unit', 'Rate', 'Start Date', 'Maturity Date', 'Days Remaining', 'Interest', 'FD Certificate', 'Status']],
+                    body: tableData,
+                    startY: 20
+                });
+                doc.save(`${accountHolderName}_FD_Records.pdf`);
+            } catch (error) {
+                console.error('Error exporting to PDF:', error);
+                alert('Failed to export to PDF. Check the console for details.');
+            }
+        }
+
+        function exportToExcel() {
+            try {
+                const accountHolderName = document.getElementById('accountHolderSelect').value;
+                const records = getAccountRecords(accountHolderName);
+                if (!records.length) {
+                    alert("No records to export.");
+                    return;
+                }
+                const data = records.map(r => ({
+                    'Bank Name': r.bankName,
+                    'Amount': r.amount,
+                    'Duration': r.duration,
+                    'Unit': r.durationUnit,
+                    'Interest Rate': r.interestRate,
+                    'Start Date': formatDate(r.fdStartDate),
+                    'Maturity Date': formatDate(r.fdMaturityDate),
+                    'Days Remaining': r.fdRenewalDaysRemaining,
+                    'Interest': r.interest,
+                    'FD Certificate': r.fdCertificate,
+                    'Status': r.fdRenewalDaysRemaining > 0 ? 'Active' : 'Matured'
+                }));
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'FD Records');
+                XLSX.writeFile(wb, `${accountHolderName}_FD_Records.xlsx`);
+            } catch (error) {
+                console.error('Error exporting to Excel:', error);
+                alert('Failed to export to Excel. Check the console for details.');
+            }
+        }
+
+        function importFromExcel() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            if (!accountHolderName) {
+                alert("Please select an account holder before importing.");
+                return;
+            }
+            const fileInput = document.getElementById('importExcelFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select an Excel file to import.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet);
+                    const records = jsonData.map(row => {
+                        const bankName = row['Bank Name'] || '';
+                        const amount = parseFloat(row['Amount']) || 0;
+                        const duration = parseInt(row['Duration']) || 0;
+                        const durationUnit = row['Unit'] || 'Days';
+                        const interestRate = parseFloat(row['Interest Rate']) || 0;
+                        const fdStartDate = row['Start Date'] || '';
+                        const fdCertificate = row['FD Certificate'] || 'not obtained';
+                        if (!validateInputs(bankName, amount, duration, interestRate, fdStartDate, fdCertificate)) {
+                            throw new Error(`Invalid data in row: ${JSON.stringify(row)}`);
+                        }
+                        const fdMaturityDate = calculateMaturityDate(fdStartDate, duration, durationUnit);
+                        const fdRenewalDaysRemaining = calculateRenewalDaysRemaining(fdMaturityDate);
+                        const interest = calculateInterest(amount, interestRate, duration, durationUnit);
+                        return { bankName, amount, duration, durationUnit, interestRate, fdStartDate, fdMaturityDate, fdRenewalDaysRemaining, interest, fdCertificate };
+                    });
+                    let existingRecords = getAccountRecords(accountHolderName);
+                    existingRecords = existingRecords.concat(records);
+                    saveAccountRecords(accountHolderName, existingRecords);
+                    loadAccountRecords();
+                    updateBankSuggestions();
+                    alert("Records imported successfully!");
+                    fileInput.value = '';
+                } catch (error) {
+                    console.error('Error importing from Excel:', error);
+                    alert('Failed to import records. Check the console for details.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function populateFDRecordSelect(records) {
+            const fdRecordSelect = document.getElementById('fdRecordSelect');
+            fdRecordSelect.innerHTML = '';
+            records.forEach((record, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${record.bankName} - ${formatCurrency(record.amount)}`;
+                fdRecordSelect.appendChild(option);
+            });
+            if (records.length > 0) updateInterestFields();
+        }
+
+        function updateInterestFields() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            const records = getAccountRecords(accountHolderName);
+            const fdRecordIndex = document.getElementById('fdRecordSelect').value;
+            if (records && records[fdRecordIndex]) {
+                const record = records[fdRecordIndex];
+                document.getElementById('interestBankName').value = record.bankName;
+                document.getElementById('interestAmount').value = record.amount;
+            } else {
+                document.getElementById('interestBankName').value = '';
+                document.getElementById('interestAmount').value = '';
+            }
+        }
+
+        let calculatedInterestValue = 0;
+        let calculatedInterestRecord = {};
+        function calculateAndDisplayInterest() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            if (!accountHolderName) {
+                document.getElementById('calculatedInterest').textContent = "No account holder selected.";
+                return;
+            }
+            const records = getAccountRecords(accountHolderName);
+            const fdRecordIndex = document.getElementById('fdRecordSelect').value;
+            if (!records || records.length === 0) {
+                document.getElementById('calculatedInterest').textContent = "No records found.";
+                return;
+            }
+            if (!records[fdRecordIndex]) {
+                document.getElementById('calculatedInterest').textContent = "No FD Record Selected.";
+                return;
+            }
+            const record = records[fdRecordIndex];
+            let amount = record.amount;
+            let interestRate = record.interestRate;
+            let duration = record.duration;
+            let unit = record.durationUnit;
+            const period = document.getElementById('interestCalculationPeriod').value;
+            const fromDate = document.getElementById('interestFromDate').value;
+            const toDate = document.getElementById('interestToDate').value;
+            if (period === 'fullCustom') {
+                amount = parseFloat(document.getElementById('customInterestAmount').value) || 0;
+                interestRate = parseFloat(document.getElementById('customInterestRate').value) || 0;
+                duration = parseFloat(document.getElementById('customInterestDuration').value) || 0;
+                unit = document.getElementById('customInterestDurationUnit').value;
+                if (amount <= 0 || interestRate < 0 || duration <= 0) {
+                    document.getElementById('calculatedInterest').textContent = "Please enter valid values.";
+                    return;
+                }
+            }
+            let interest = 0;
+            if (period === 'whole') interest = calculateInterest(amount, interestRate, duration, unit);
+            else if (period === 'custom') {
+                if (!fromDate || !toDate || new Date(fromDate) > new Date(toDate)) {
+                    document.getElementById('calculatedInterest').textContent = "Please select valid From and To dates.";
+                    return;
+                }
+                interest = calculateInterest(amount, interestRate, duration, unit, fromDate, toDate);
+            } else if (period === 'fullCustom') interest = calculateInterest(amount, interestRate, duration, unit);
+            calculatedInterestValue = interest.toFixed(2);
+            document.getElementById('calculatedInterest').textContent = formatCurrency(calculatedInterestValue);
+            calculatedInterestRecord = {
+                accountHolderName,
+                bankName: document.getElementById('interestBankName').value,
+                amount,
+                interestRate,
+                fdStartDate: fromDate || record.fdStartDate,
+                fdMaturityDate: toDate || record.fdMaturityDate,
+                interest: calculatedInterestValue,
+                interestCalculationPeriod: period
+            };
+            saveCalculatedInterest();
+        }
+
+        function getSavedInterest() {
+            const encrypted = localStorage.getItem('savedInterest');
+            return decryptData(encrypted);
+        }
+
+        function saveCalculatedInterest() {
+            let savedInterestRecords = getSavedInterest();
+            savedInterestRecords.push(calculatedInterestRecord);
+            localStorage.setItem('savedInterest', encryptData(savedInterestRecords));
+            loadSavedInterest();
+            document.getElementById('calculatedInterest').textContent = '0';
+        }
+
+        function loadSavedInterest() {
+            const savedInterestList = document.getElementById('savedInterestList');
+            savedInterestList.innerHTML = '';
+            const savedInterestRecords = getSavedInterest();
+            savedInterestRecords.forEach((record, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.accountHolderName}</td>
+                    <td>${record.bankName}</td>
+                    <td>${formatCurrency(record.amount)}</td>
+                    <td>${record.interestRate}</td>
+                    <td>${formatDate(record.fdStartDate)}</td>
+                    <td>${formatDate(record.fdMaturityDate)}</td>
+                    <td>${record.interestCalculationPeriod}</td>
+                    <td>${formatCurrency(record.interest)}</td>
+                    <td>
+                        <button class="editSavedBtn" data-index="${index}">Edit</button>
+                        <button class="deleteSavedBtn" data-index="${index}">Delete</button>
+                    </td>
+                `;
+                savedInterestList.appendChild(row);
+            });
+            document.querySelectorAll('.editSavedBtn').forEach(btn => btn.addEventListener('click', () => editSavedInterest(btn.dataset.index)));
+            document.querySelectorAll('.deleteSavedBtn').forEach(btn => btn.addEventListener('click', () => deleteSavedInterest(btn.dataset.index)));
+        }
+
+        function editSavedInterest(index) {
+            if (confirm("Are you sure you want to edit this saved interest record?")) {
+                const savedInterestRecords = getSavedInterest();
+                const record = savedInterestRecords[index];
+                document.getElementById('accountHolderSelect').value = record.accountHolderName;
+                loadAccountRecords();
+                document.getElementById('interestBankName').value = record.bankName;
+                document.getElementById('interestAmount').value = record.amount;
+                document.getElementById('customInterestAmount').value = record.amount;
+                document.getElementById('customInterestRate').value = record.interestRate;
+                document.getElementById('interestFromDate').value = record.fdStartDate;
+                document.getElementById('interestToDate').value = record.fdMaturityDate;
+                document.getElementById('interestCalculationPeriod').value = record.interestCalculationPeriod;
+                calculatedInterestValue = record.interest;
+                document.getElementById('calculatedInterest').textContent = formatCurrency(calculatedInterestValue);
+                savedInterestRecords.splice(index, 1);
+                localStorage.setItem('savedInterest', encryptData(savedInterestRecords));
+                loadSavedInterest();
+            }
+        }
+
+        function deleteSavedInterest(index) {
+            if (confirm("Are you sure you want to delete this saved interest record?")) {
+                let savedInterestRecords = getSavedInterest();
+                savedInterestRecords.splice(index, 1);
+                localStorage.setItem('savedInterest', encryptData(savedInterestRecords));
+                loadSavedInterest();
+            }
+        }
+
+        function clearAllSavedInterest() {
+            if (confirm("Are you sure you want to clear all saved interest records?")) {
+                localStorage.removeItem('savedInterest');
+                loadSavedInterest();
+            }
+        }
+
+        function exportSavedInterestToPDF() {
+            try {
+                const savedInterestRecords = getSavedInterest();
+                if (!savedInterestRecords.length) {
+                    alert("No saved interest records to export.");
+                    return;
+                }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.text("Saved Interest Records", 10, 10);
+                const tableData = savedInterestRecords.map(r => [
+                    r.accountHolderName, r.bankName, formatCurrency(r.amount), r.interestRate.toString(),
+                    formatDate(r.fdStartDate), formatDate(r.fdMaturityDate), r.interestCalculationPeriod, formatCurrency(r.interest)
+                ]);
+                doc.autoTable({
+                    head: [['Holder', 'Bank Name', 'Amount', 'Rate', 'Start Date', 'End Date', 'Period', 'Interest']],
+                    body: tableData,
+                    startY: 20
+                });
+                doc.save('Saved_Interest_Records.pdf');
+            } catch (error) {
+                console.error('Error exporting saved interest to PDF:', error);
+                alert('Failed to export saved interest to PDF. Check the console for details.');
+            }
+        }
+
+        function exportSavedInterestToExcel() {
+            try {
+                const savedInterestRecords = getSavedInterest();
+                if (!savedInterestRecords.length) {
+                    alert("No saved interest records to export.");
+                    return;
+                }
+                const data = savedInterestRecords.map(r => ({
+                    'Account Holder': r.accountHolderName,
+                    'Bank Name': r.bankName,
+                    'Amount': r.amount,
+                    'Interest Rate': r.interestRate,
+                    'Start Date': formatDate(r.fdStartDate),
+                    'End Date': formatDate(r.fdMaturityDate),
+                    'Period': r.interestCalculationPeriod,
+                    'Interest': r.interest
+                }));
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Saved Interest');
+                XLSX.writeFile(wb, 'Saved_Interest_Records.xlsx');
+            } catch (error) {
+                console.error('Error exporting saved interest to Excel:', error);
+                alert('Failed to export saved interest to Excel. Check the console for details.');
+            }
+        }
+
+        function sortTable(field, accountHolderName) {
+            let records = getAccountRecords(accountHolderName);
+            const isNumeric = ['amount', 'duration', 'interestRate', 'fdRenewalDaysRemaining', 'interest'].includes(field);
+            records.sort((a, b) => {
+                let valA = a[field];
+                let valB = b[field];
+                if (isNumeric) return valA - valB;
+                return valA.localeCompare(valB);
+            });
+            if (records[0][field] === getAccountRecords(accountHolderName)[0][field]) records.reverse();
+            saveAccountRecords(accountHolderName, records);
+            loadAccountRecords();
+        }
+
+        function filterRecords() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            let records = getAccountRecords(accountHolderName);
+            const filteredRecords = records.filter(record => 
+                record.bankName.toLowerCase().includes(searchValue) || 
+                record.amount.toString().includes(searchValue)
+            );
+            displayRecords(filteredRecords, accountHolderName);
+        }
+
+        function displayRecords(records, accountHolderName) {
+            const tbody = document.getElementById('records');
+            tbody.innerHTML = '';
+            records.forEach((record, index) => {
+                const renewalDays = record.fdRenewalDaysRemaining;
+                let renewalClass = '';
+                if (renewalDays > 15) renewalClass = 'renewal-green';
+                else if (renewalDays >= 10 && renewalDays <= 14) renewalClass = 'renewal-yellow';
+                else if (renewalDays >= 1 && renewalDays <= 9) renewalClass = 'renewal-red';
+                else renewalClass = 'renewal-expired expired-circle';
+                const certificateClass = record.fdCertificate === 'obtained' ? 'certificate-obtained' : 'certificate-not-obtained';
+                const status = renewalDays > 0 ? 'Active' : 'Matured';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="checkbox" class="recordCheckbox" data-index="${index}"></td>
+                    <td class="${renewalClass}">${record.bankName}</td>
+                    <td class="${renewalClass}">${formatCurrency(record.amount)}</td>
+                    <td>${record.duration}</td>
+                    <td>${record.durationUnit}</td>
+                    <td>${record.interestRate}</td>
+                    <td>${formatDate(record.fdStartDate)}</td>
+                    <td>${formatDate(record.fdMaturityDate)}</td>
+                    <td class="${renewalClass}">${renewalDays}</td>
+                    <td>${formatCurrency(record.interest)}</td>
+                    <td class="${certificateClass}">${record.fdCertificate}</td>
+                    <td>${status}</td>
+                    <td>
+                        <button class="editBtn" data-account="${accountHolderName}" data-index="${index}">Edit</button>
+                        <button class="deleteBtn" data-account="${accountHolderName}" data-index="${index}">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            document.querySelectorAll('.editBtn').forEach(btn => btn.addEventListener('click', () => editRecord(btn.dataset.account, btn.dataset.index)));
+            document.querySelectorAll('.deleteBtn').forEach(btn => btn.addEventListener('click', () => deleteRecord(btn.dataset.account, btn.dataset.index)));
+            document.querySelectorAll('.sortable').forEach(header => header.addEventListener('click', () => sortTable(header.dataset.sort, accountHolderName)));
+            updateSummary(records);
+            updateMaturityCalendar(records);
+        }
+
+        function updateSummary(records) {
+            const totalInvestment = records.reduce((sum, r) => sum + r.amount, 0);
+            const totalInterest = records.reduce((sum, r) => sum + r.interest, 0);
+            const activeFDs = records.filter(r => r.fdRenewalDaysRemaining > 0).length;
+            const maturedFDs = records.filter(r => r.fdRenewalDaysRemaining <= 0).length;
+
+            document.getElementById('totalInvestment').textContent = formatCurrency(totalInvestment);
+            document.getElementById('totalInterest').textContent = formatCurrency(totalInterest);
+            document.getElementById('activeFDs').textContent = activeFDs;
+            document.getElementById('maturedFDs').textContent = maturedFDs;
+
+            const bankBreakdown = {};
+            records.forEach(record => {
+                bankBreakdown[record.bankName] = (bankBreakdown[record.bankName] || 0) + 1;
+            });
+            const breakdownDiv = document.getElementById('bankBreakdown');
+            breakdownDiv.innerHTML = '<h4>FDs by Bank:</h4>';
+            for (const [bank, count] of Object.entries(bankBreakdown)) {
+                breakdownDiv.innerHTML += `<p>${bank}: ${count} FD(s)</p>`;
+            }
+        }
+
+        function updateMaturityCalendar(records) {
+            const calendarList = document.getElementById('maturityCalendar');
+            calendarList.innerHTML = '';
+            const upcoming = records.filter(r => r.fdRenewalDaysRemaining >= 0 && r.fdRenewalDaysRemaining <= 30);
+            upcoming.sort((a, b) => a.fdRenewalDaysRemaining - b.fdRenewalDaysRemaining);
+            upcoming.forEach(record => {
+                const li = document.createElement('li');
+                li.textContent = `${record.bankName} - ${formatDate(record.fdMaturityDate)} (${record.fdRenewalDaysRemaining} days remaining)`;
+                calendarList.appendChild(li);
+            });
+            if (!upcoming.length) {
+                const li = document.createElement('li');
+                li.textContent = 'No upcoming maturities within 30 days.';
+                calendarList.appendChild(li);
+            }
+        }
+
+        function updateInterestPreview() {
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const duration = parseInt(document.getElementById('duration').value) || 0;
+            const durationUnit = document.getElementById('durationUnit').value;
+            const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
+            const fdStartDate = document.getElementById('fdStartDate').value;
+            try {
+                if (amount > 0 && duration > 0 && interestRate >= 0 && fdStartDate) {
+                    const interest = calculateInterest(amount, interestRate, duration, durationUnit);
+                    document.getElementById('interestPreview').textContent = formatCurrency(interest);
+                } else {
+                    document.getElementById('interestPreview').textContent = formatCurrency(0);
+                }
+            } catch (error) {
+                document.getElementById('interestPreview').textContent = 'Invalid input';
+            }
+        }
+
+        function generateChart(type) {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            const records = getAccountRecords(accountHolderName);
+            if (!records.length) {
+                alert("No records to generate a chart.");
+                return;
+            }
+
+            const bankTotals = {};
+            records.forEach(record => {
+                bankTotals[record.bankName] = (bankTotals[record.bankName] || 0) + record.amount;
+            });
+
+            const labels = Object.keys(bankTotals);
+            const data = Object.values(bankTotals);
+            const colors = labels.map(() => '#' + Math.floor(Math.random()*16777215).toString(16));
+
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            document.getElementById('chartContainer').classList.remove('hidden');
+
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Investment',
+                        data: data,
+                        backgroundColor: type === 'pie' ? colors : '#3498db',
+                        borderColor: '#2c3e50',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: `Portfolio Distribution by Bank (${type === 'pie' ? 'Pie' : 'Bar'})` }
+                    }
+                }
+            });
+        }
+
+        function backupAllData() {
+            const allData = {
+                accountHolders: getAccountHolders(),
+                accountRecords: {},
+                savedInterest: getSavedInterest(),
+                accountPasswords: JSON.parse(localStorage.getItem('accountPasswords') || '{}')
+            };
+            getAccountHolders().forEach(holder => {
+                allData.accountRecords[holder] = getAccountRecords(holder);
+            });
+            const dataStr = JSON.stringify(allData);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'FD_Full_Backup.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function restoreData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        localStorage.setItem('accountHolders', encryptData(data.accountHolders));
+                        for (const [holder, records] of Object.entries(data.accountRecords)) {
+                            saveAccountRecords(holder, records);
+                        }
+                        localStorage.setItem('savedInterest', encryptData(data.savedInterest));
+                        localStorage.setItem('accountPasswords', JSON.stringify(data.accountPasswords));
+                        loadAccountHolders();
+                        alert('Data restored successfully!');
+                    } catch (error) {
+                        console.error('Error restoring data:', error);
+                        alert('Failed to restore data. Check the console for details.');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function updateBankSuggestions() {
+            const suggestions = document.getElementById('bankSuggestions');
+            suggestions.innerHTML = '';
+            const allRecords = [];
+            getAccountHolders().forEach(holder => {
+                allRecords.push(...getAccountRecords(holder));
+            });
+            const uniqueBanks = [...new Set(allRecords.map(r => r.bankName))];
+            uniqueBanks.forEach(bank => {
+                const option = document.createElement('option');
+                option.value = bank;
+                suggestions.appendChild(option);
+            });
+        }
+
+        function bulkDelete() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            if (!accountHolderName) {
+                alert("Please select an account holder first.");
+                return;
+            }
+            const selectedIndices = getSelectedIndices();
+            if (!selectedIndices.length) {
+                alert("Please select at least one record to delete.");
+                return;
+            }
+            if (confirm(`Are you sure you want to delete ${selectedIndices.length} selected records?`)) {
+                let records = getAccountRecords(accountHolderName);
+                selectedIndices.sort((a, b) => b - a).forEach(index => records.splice(index, 1));
+                saveAccountRecords(accountHolderName, records);
+                loadAccountRecords();
+            }
+        }
+
+        function bulkExport() {
+            const accountHolderName = document.getElementById('accountHolderSelect').value;
+            if (!accountHolderName) {
+                alert("Please select an account holder first.");
+                return;
+            }
+            const selectedIndices = getSelectedIndices();
+            if (!selectedIndices.length) {
+                alert("Please select at least one record to export.");
+                return;
+            }
+            const records = getAccountRecords(accountHolderName).filter((_, index) => selectedIndices.includes(index));
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text(`Selected Fixed Deposit Records - ${accountHolderName}`, 10, 10);
+            const tableData = records.map(r => [
+                r.bankName, formatCurrency(r.amount), r.duration.toString(), r.durationUnit, r.interestRate.toString(),
+                formatDate(r.fdStartDate), formatDate(r.fdMaturityDate), r.fdRenewalDaysRemaining.toString(), formatCurrency(r.interest), r.fdCertificate, r.fdRenewalDaysRemaining > 0 ? 'Active' : 'Matured'
+            ]);
+            doc.autoTable({
+                head: [['Bank Name', 'Amount', 'Duration', 'Unit', 'Rate', 'Start Date', 'Maturity Date', 'Days Remaining', 'Interest', 'FD Certificate', 'Status']],
+                body: tableData,
+                startY: 20
+            });
+            doc.save(`${accountHolderName}_Selected_FD_Records.pdf`);
+        }
+
+        function getSelectedIndices() {
+            return Array.from(document.querySelectorAll('.recordCheckbox:checked')).map(cb => parseInt(cb.dataset.index));
+        }
+
+        function toggleSelectAll() {
+            const isChecked = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.recordCheckbox').forEach(cb => cb.checked = isChecked);
+        }
+    </script>
+</body>
+</html>
