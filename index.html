@@ -103,7 +103,7 @@
         .renewal-yellow { color: #f1c40f; }
         .renewal-red { color: #e74c3c; animation: blinker 1s linear infinite; }
         @keyframes blinker { 50% { opacity: 0; } }
-        .expired-circle::after { content: " 🔴"; }
+        .expired-circle::after { content: " 🔴"; animation: blinker 1s linear infinite; }
         .certificate-obtained { color: #27ae60; }
         .certificate-not-obtained { color: #e74c3c; }
         .tooltip {
@@ -134,7 +134,7 @@
             background: #ecf0f1;
         }
         .calendar-list { list-style: none; padding: 0; }
-        .calendar-list li { margin: 8px 0; color: #7f8c8d; }
+        .calendar-list li { margin: 8px 0; }
         footer {
             text-align: center;
             margin-top: 30px;
@@ -148,20 +148,25 @@
             margin-right: auto;
         }
         datalist { width: 100%; max-width: 300px; }
+        .summary-table {
+            width: 50%;
+            margin: 20px auto;
+        }
         @media (max-width: 768px) {
             .container { padding: 15px; }
             .form-group { flex-direction: column; align-items: stretch; }
             .form-group label { flex: 1 1 auto; }
             input, select { max-width: 100%; }
             button { width: 100%; max-width: 200px; margin: 5px auto; }
-            table { font-size: 12px; }
+            table, .summary-table { font-size: 12px; }
             th, td { padding: 8px; }
             .interest-section, .saved-interest-section, .summary-section, .calendar-section { padding: 15px; }
+            .summary-table { width: 100%; }
         }
         @media (max-width: 480px) {
             h2 { font-size: 1.2em; }
             button { font-size: 12px; padding: 6px 12px; }
-            table { font-size: 10px; }
+            table, .summary-table { font-size: 10px; }
             th, td { padding: 6px; }
         }
     </style>
@@ -189,6 +194,32 @@
             <button id="bulkDeleteBtn">Delete Selected</button>
             <button id="bulkExportBtn">Export Selected</button>
         </div>
+
+        <div class="calendar-section">
+            <h3>Upcoming Maturities</h3>
+            <ul class="calendar-list" id="maturityCalendar"></ul>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll"></th>
+                    <th class="sortable" data-sort="bankName">Bank Name</th>
+                    <th class="sortable" data-sort="amount">Amount</th>
+                    <th class="sortable" data-sort="duration">Duration</th>
+                    <th>Duration Unit</th>
+                    <th class="sortable" data-sort="interestRate">Interest Rate</th>
+                    <th class="sortable" data-sort="fdStartDate">FD Start Date</th>
+                    <th class="sortable" data-sort="fdMaturityDate">FD Maturity Date</th>
+                    <th class="sortable" data-sort="fdRenewalDaysRemaining">FD Renewal Days</th>
+                    <th class="sortable" data-sort="interest">Interest</th>
+                    <th class="sortable" data-sort="fdCertificate">FD Certificate</th>
+                    <th class="sortable" data-sort="status">Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="records"></tbody>
+        </table>
 
         <div class="form-group">
             <label class="tooltip">Bank Name: <span class="tooltiptext">Select or type bank name</span>
@@ -220,32 +251,6 @@
             <label>Import from Excel: <input type="file" id="importExcelFile" accept=".xlsx, .xls"></label>
             <button id="importExcelBtn">Import</button>
             <p>Estimated Interest: <span id="interestPreview">0</span></p>
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="selectAll"></th>
-                    <th class="sortable" data-sort="bankName">Bank Name</th>
-                    <th class="sortable" data-sort="amount">Amount</th>
-                    <th class="sortable" data-sort="duration">Duration</th>
-                    <th>Duration Unit</th>
-                    <th class="sortable" data-sort="interestRate">Interest Rate</th>
-                    <th class="sortable" data-sort="fdStartDate">FD Start Date</th>
-                    <th class="sortable" data-sort="fdMaturityDate">FD Maturity Date</th>
-                    <th class="sortable" data-sort="fdRenewalDaysRemaining">FD Renewal Days</th>
-                    <th class="sortable" data-sort="interest">Interest</th>
-                    <th class="sortable" data-sort="fdCertificate">FD Certificate</th>
-                    <th class="sortable" data-sort="status">Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="records"></tbody>
-        </table>
-
-        <div class="calendar-section">
-            <h3>Upcoming Maturities</h3>
-            <ul class="calendar-list" id="maturityCalendar"></ul>
         </div>
 
         <div class="interest-section">
@@ -307,7 +312,16 @@
             <p>Total Interest Expected: <span id="totalInterest">0</span></p>
             <p>Active FDs: <span id="activeFDs">0</span></p>
             <p>Matured FDs: <span id="maturedFDs">0</span></p>
-            <div id="bankBreakdown"></div>
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Bank Name</th>
+                        <th>Number of FDs</th>
+                        <th>Total FD Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="bankBreakdown"></tbody>
+            </table>
             <button id="generatePieChartBtn">Generate Pie Chart</button>
             <button id="generateBarChartBtn">Generate Bar Chart</button>
             <div id="chartContainer" class="hidden">
@@ -1031,12 +1045,22 @@
 
             const bankBreakdown = {};
             records.forEach(record => {
-                bankBreakdown[record.bankName] = (bankBreakdown[record.bankName] || 0) + 1;
+                if (!bankBreakdown[record.bankName]) {
+                    bankBreakdown[record.bankName] = { count: 0, totalAmount: 0 };
+                }
+                bankBreakdown[record.bankName].count += 1;
+                bankBreakdown[record.bankName].totalAmount += record.amount;
             });
-            const breakdownDiv = document.getElementById('bankBreakdown');
-            breakdownDiv.innerHTML = '<h4>FDs by Bank:</h4>';
-            for (const [bank, count] of Object.entries(bankBreakdown)) {
-                breakdownDiv.innerHTML += `<p>${bank}: ${count} FD(s)</p>`;
+            const breakdownTbody = document.getElementById('bankBreakdown');
+            breakdownTbody.innerHTML = '';
+            for (const [bank, data] of Object.entries(bankBreakdown)) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${bank}</td>
+                    <td>${data.count}</td>
+                    <td>${formatCurrency(data.totalAmount)}</td>
+                `;
+                breakdownTbody.appendChild(row);
             }
         }
 
@@ -1044,15 +1068,24 @@
             const calendarList = document.getElementById('maturityCalendar');
             calendarList.innerHTML = '';
             const upcoming = records.filter(r => r.fdRenewalDaysRemaining >= 0 && r.fdRenewalDaysRemaining <= 30);
-            upcoming.sort((a, b) => a.fdRenewalDaysRemaining - b.fdRenewalDaysRemaining);
-            upcoming.forEach(record => {
+            const expired = records.filter(r => r.fdRenewalDaysRemaining < 0);
+            const allMaturities = [...upcoming, ...expired];
+            allMaturities.sort((a, b) => a.fdRenewalDaysRemaining - b.fdRenewalDaysRemaining);
+            allMaturities.forEach(record => {
                 const li = document.createElement('li');
-                li.textContent = `${record.bankName} - ${formatDate(record.fdMaturityDate)} (${record.fdRenewalDaysRemaining} days remaining)`;
+                const days = record.fdRenewalDaysRemaining;
+                let className = '';
+                if (days > 20) className = 'renewal-green';
+                else if (days > 10) className = 'renewal-yellow';
+                else if (days >= 0) className = 'renewal-red';
+                else className = 'renewal-expired expired-circle';
+                li.className = className;
+                li.textContent = `${record.bankName} - ${formatDate(record.fdMaturityDate)} (${days} days remaining)`;
                 calendarList.appendChild(li);
             });
-            if (!upcoming.length) {
+            if (!allMaturities.length) {
                 const li = document.createElement('li');
-                li.textContent = 'No upcoming maturities within 30 days.';
+                li.textContent = 'No upcoming maturities within 30 days or expired FDs.';
                 calendarList.appendChild(li);
             }
         }
